@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandhata Internship - Timesheet Tracker</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Configuration Panel -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-clock-rotate-left brand-icon"></i>
+                <div class="brand-text">
+                    <h1>Sandhata</h1>
+                    <span class="subtitle">Internship Tracker</span>
+                </div>
+            </div>
+            
+            <form id="config-form" class="config-form">
+                <div class="form-group">
+                    <label for="username">
+                        <i class="fa-solid fa-user"></i> Intern / User Name
+                    </label>
+                    <input type="text" id="username" name="username" placeholder="e.g. Gautham" required>
+                    <span class="form-help">This determines your folder name in MS Teams.</span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="week_num">
+                            <i class="fa-solid fa-calendar-week"></i> Week
+                        </label>
+                        <select id="week_num" name="week_num" required>
+                            <!-- Dynamically generated weeks -->
+                            <option value="1">Week 1</option>
+                            <option value="2">Week 2</option>
+                            <option value="3">Week 3</option>
+                            <option value="4">Week 4</option>
+                            <option value="5">Week 5</option>
+                            <option value="6">Week 6</option>
+                            <option value="7">Week 7</option>
+                            <option value="8">Week 8</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="day_num">
+                            <i class="fa-solid fa-calendar-day"></i> Day
+                        </label>
+                        <select id="day_num" name="day_num" required>
+                            <option value="1">Day 1 (Mon)</option>
+                            <option value="2">Day 2 (Tue)</option>
+                            <option value="3">Day 3 (Wed)</option>
+                            <option value="4">Day 4 (Thu)</option>
+                            <option value="5">Day 5 (Fri)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="date_val">
+                        <i class="fa-solid fa-calendar-days"></i> Log Date
+                    </label>
+                    <input type="date" id="date_val" name="date_val" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="arrival_time">
+                        <i class="fa-solid fa-right-to-bracket"></i> Arrival Time
+                    </label>
+                    <input type="time" id="arrival_time" name="arrival_time" value="09:00" required>
+                </div>
+
+                <button type="submit" id="load-btn" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-rotate"></i> Load Timesheet
+                </button>
+            </form>
+
+            <div class="sidebar-footer">
+                <p><i class="fa-solid fa-circle-info"></i> Syncs automatically to your Teams cloud directory.</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Panel -->
+        <main class="main-content">
+            <!-- Header bar -->
+            <header class="main-header">
+                <div class="header-left">
+                    <h2 id="current-title">Timesheet Log</h2>
+                    <span id="current-date-badge" class="date-badge">Select a day to begin</span>
+                </div>
+                <div class="header-right">
+                    <div id="connection-status" class="status-indicator">
+                        <span class="dot dot-success"></span>
+                        <span class="status-text">Local Server Connected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Loading overlay inside content -->
+            <div id="loading-state" class="loading-state hidden">
+                <div class="spinner"></div>
+                <p>Loading timesheet data from Excel...</p>
+            </div>
+
+            <!-- Content Area: Initial state (prompt to select) -->
+            <div id="empty-state" class="empty-state">
+                <div class="empty-illustration">
+                    <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <h3>No Timesheet Loaded</h3>
+                <p>Please select your username, date, and arrival time in the sidebar, then click <strong>Load Timesheet</strong> to display and log your daily work hours.</p>
+            </div>
+
+            <!-- Content Area: Active slots -->
+            <div id="timesheet-area" class="timesheet-area hidden">
+                <div id="slots-container" class="slots-container">
+                    <!-- Dynamic Slot Cards will be rendered here by JS -->
+                </div>
+
+                <!-- Sync action banner -->
+                <div class="action-banner">
+                    <div class="banner-info">
+                        <h4>Ready to sync your work summaries?</h4>
+                        <p>This compiles all individual slot entries and copies them to the primary daily log (Sheet1).</p>
+                    </div>
+                    <div class="banner-actions">
+                        <button id="sync-btn" class="btn btn-success btn-large">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Sync & Save to MS Teams
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+</body>
+</html>
