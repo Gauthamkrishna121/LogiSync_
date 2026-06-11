@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sandhata Internship Tracker</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 50% 50%, rgba(28, 37, 65, 0.8) 0%, rgba(11, 19, 43, 1) 100%);
+            padding: 1.5rem;
+        }
+
+        .login-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(15px);
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-success));
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .login-brand i {
+            font-size: 2.5rem;
+            color: var(--color-primary);
+        }
+
+        .login-brand h1 {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-brand">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <h1>Sandhata</h1>
+            </div>
+            <p>Internship Timesheet Portal</p>
+        </div>
+
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label for="username">
+                    <i class="fa-solid fa-user"></i> Username
+                </label>
+                <input type="text" id="username" name="username" placeholder="Enter username" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    <i class="fa-solid fa-lock"></i> Password
+                </label>
+                <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
+                <i class="fa-solid fa-right-to-bracket"></i> Login
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <p>&copy; 2026 Sandhata Internship Management</p>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const submitBtn = document.getElementById('submit-btn');
+
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+
+                if (!username || !password) {
+                    showToast('Please fill in all fields.', 'warning');
+                    return;
+                }
+
+                // Show loading status
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+
+                fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Login failed.');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showToast('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        if (data.user.role === 'admin') {
+                            window.location.href = '/admin';
+                        } else {
+                            window.location.href = '/';
+                        }
+                    }, 1000);
+                })
+                .catch(err => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login';
+                    showToast(err.message, 'warning');
+                });
+            });
+
+            // Toast Utility
+            function showToast(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                
+                let iconHtml = '<i class="fa-solid fa-circle-info toast-icon"></i>';
+                if (type === 'success') {
+                    iconHtml = '<i class="fa-solid fa-circle-check toast-icon"></i>';
+                } else if (type === 'warning') {
+                    iconHtml = '<i class="fa-solid fa-triangle-exclamation toast-icon"></i>';
+                }
+
+                toast.innerHTML = `
+                    ${iconHtml}
+                    <span class="toast-message">${message}</span>
+                `;
+                
+                container.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s forwards';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            }
+        });
+    </script>
+</body>
+</html>

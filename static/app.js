@@ -26,8 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load initial config from backend
     fetch('/api/config')
-        .then(response => response.json())
+        .then(response => {
+            if (response.redirected || !response.ok) {
+                window.location.href = '/login';
+                return;
+            }
+            return response.json();
+        })
         .then(config => {
+            if (!config) return;
             if (config.default_username) {
                 usernameInput.value = config.default_username;
             }
