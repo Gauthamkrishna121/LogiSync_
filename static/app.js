@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const configForm = document.getElementById('config-form');
     const usernameInput = document.getElementById('username');
+    const teamsSyncDirInput = document.getElementById('teams_sync_dir');
     const weekSelect = document.getElementById('week_num');
     const daySelect = document.getElementById('day_num');
     const dateInput = document.getElementById('date_val');
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const currentTitle = document.getElementById('current-title');
     const currentDateBadge = document.getElementById('current-date-badge');
+    const currentPathBadge = document.getElementById('current-path-badge');
     
     // Set default date to today
     const today = new Date();
@@ -30,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(config => {
             if (config.default_username) {
                 usernameInput.value = config.default_username;
+            }
+            if (config.teams_sync_dir) {
+                teamsSyncDirInput.value = config.teams_sync_dir;
             }
             if (config.start_date) {
                 // Auto calculate week/day based on date input and start_date if needed
@@ -86,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         const username = usernameInput.value.trim();
+        const teams_sync_dir = teamsSyncDirInput.value.trim();
         const week_num = parseInt(weekSelect.value);
         const day_num = parseInt(daySelect.value);
         const date_val = dateInput.value;
@@ -105,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/load-timesheet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, week_num, day_num, date_val, arrival_time })
+            body: JSON.stringify({ username, teams_sync_dir, week_num, day_num, date_val, arrival_time })
         })
         .then(response => {
             if (!response.ok) throw new Error('Failed to load timesheet.');
@@ -119,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set header info
             currentTitle.textContent = `${username}'s Timesheet`;
             currentDateBadge.textContent = `Week ${week_num}, Day ${day_num} • ${date_val}`;
+            currentPathBadge.textContent = `Excel file: ${data.filepath}`;
+            currentPathBadge.classList.remove('hidden');
 
             renderSlotCards(data.slots);
             showToast('Timesheet loaded successfully!', 'success');
@@ -127,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingState.classList.add('hidden');
             emptyState.classList.remove('hidden');
             loadBtn.disabled = false;
+            currentPathBadge.classList.add('hidden');
             showToast(err.message, 'warning');
         });
     });
@@ -212,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/save-slot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, row, text })
+            body: JSON.stringify({ username, teams_sync_dir: teamsSyncDirInput.value.trim(), row, text })
         })
         .then(response => {
             if (!response.ok) throw new Error();
@@ -238,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/sync-day', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, week_num, day_num })
+            body: JSON.stringify({ username, teams_sync_dir: teamsSyncDirInput.value.trim(), week_num, day_num })
         })
         .then(response => {
             if (!response.ok) throw new Error('Daily log sync failed.');

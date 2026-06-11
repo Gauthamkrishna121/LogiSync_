@@ -16,14 +16,29 @@ def get_config():
             return {}
     return {}
 
-def get_user_filepath(username):
+
+def save_config(update_data):
     config = get_config()
+    config.update(update_data)
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=2)
+    except Exception:
+        raise
+    return config
+
+
+def get_user_filepath(username, teams_sync_dir=None):
+    config = get_config()
+    if teams_sync_dir is None:
+        teams_sync_dir = config.get("teams_sync_dir", DEFAULT_USERS_DIR)
+    teams_sync_dir = teams_sync_dir or DEFAULT_USERS_DIR
+
     username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
     if not username_clean:
         username_clean = "Default_User"
         
-    base_dir = config.get("teams_sync_dir", DEFAULT_USERS_DIR)
-    
+    base_dir = teams_sync_dir
     # If the user put a relative path, make it relative to this project
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(base_dir)
@@ -42,8 +57,26 @@ def api_get_config():
     config = get_config()
     return jsonify({
         "start_date": config.get("start_date", "2026-06-01"),
-        "default_username": config.get("default_username", "")
+        "default_username": config.get("default_username", ""),
+        "teams_sync_dir": config.get("teams_sync_dir", "")
     })
+
+@app.route('/api/config', methods=['POST'])
+def api_save_config():
+    data = request.json or {}
+    update_fields = {}
+
+    if data.get('start_date'):
+        update_fields['start_date'] = data['start_date']
+    if data.get('default_username'):
+        update_fields['default_username'] = data['default_username']
+    if data.get('teams_sync_dir'):
+        update_fields['teams_sync_dir'] = data['teams_sync_dir']
+
+    if update_fields:
+        save_config(update_fields)
+
+    return jsonify(get_config())
 
 @app.route('/api/load-timesheet', methods=['POST'])
 def api_load_timesheet():
@@ -58,7 +91,14 @@ def api_load_timesheet():
     if not username:
         return jsonify({"error": "Username is required"}), 400
         
-    filepath = get_user_filepath(username)
+    teams_sync_dir = data.get('teams_sync_dir')
+    if teams_sync_dir:
+        save_config({
+            'teams_sync_dir': teams_sync_dir,
+            'default_username': username
+        })
+
+    filepath = get_user_filepath(username, teams_sync_dir)
     
     # Format date from YYYY-MM-DD to DD/MM/YYYY for the Excel sheet representation
     # (or keep YYYY-MM-DD if desired, let's convert to DD/MM/YYYY to make it look professional)
@@ -85,11 +125,18 @@ def api_save_slot():
     username = data.get('username')
     row = int(data.get('row'))
     text = data.get('text', '')
+    teams_sync_dir = data.get('teams_sync_dir')
     
     if not username or not row:
         return jsonify({"error": "Missing parameters"}), 400
         
-    filepath = get_user_filepath(username)
+    if teams_sync_dir:
+        save_config({
+            'teams_sync_dir': teams_sync_dir,
+            'default_username': username
+        })
+
+    filepath = get_user_filepath(username, teams_sync_dir)
     
     try:
         excel_manager.save_timesheet_slot_activity(filepath, row, text)
@@ -104,11 +151,18 @@ def api_sync_day():
     username = data.get('username')
     week_num = int(data.get('week_num'))
     day_num = int(data.get('day_num'))
+    teams_sync_dir = data.get('teams_sync_dir')
     
     if not username or not week_num or not day_num:
         return jsonify({"error": "Missing parameters"}), 400
         
-    filepath = get_user_filepath(username)
+    if teams_sync_dir:
+        save_config({
+            'teams_sync_dir': teams_sync_dir,
+            'default_username': username
+        })
+
+    filepath = get_user_filepath(username, teams_sync_dir)
     
     try:
         excel_manager.sync_timesheet_to_daily_log(filepath, week_num, day_num)

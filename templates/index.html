@@ -30,7 +30,15 @@
                         <i class="fa-solid fa-user"></i> Intern / User Name
                     </label>
                     <input type="text" id="username" name="username" placeholder="e.g. Gautham" required>
-                    <span class="form-help">This determines your folder name in MS Teams.</span>
+                    <span class="form-help">This determines your folder name in Microsoft Teams.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="teams_sync_dir">
+                        <i class="fa-solid fa-folder-open"></i> Teams Sync Folder
+                    </label>
+                    <input type="text" id="teams_sync_dir" name="teams_sync_dir" placeholder="e.g. C:\\Users\\Chakku\\TeamsSync\\MyTeam">
+                    <span class="form-help">Enter the local folder synced by Microsoft Teams / OneDrive.</span>
                 </div>
 
                 <div class="form-row">
@@ -96,6 +104,7 @@
                 <div class="header-left">
                     <h2 id="current-title">Timesheet Log</h2>
                     <span id="current-date-badge" class="date-badge">Select a day to begin</span>
+                    <span id="current-path-badge" class="date-badge hidden"></span>
                 </div>
                 <div class="header-right">
                     <div id="connection-status" class="status-indicator">
