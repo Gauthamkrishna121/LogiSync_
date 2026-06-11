@@ -16,5 +16,11 @@
         "password_hash": "scrypt:32768:8:1$obqxG13XNOYRZlbX$bb69db3c858a310a22ec0f0ba27e2e71edd6a95c78554a9718f361486d47930344276a1b6d7ed92a547c65ddc31955ce53c5877f34a1ce9e7bb49c2f61fbdfdd",
         "full_name": "Chakravarthy.p",
         "role": "student"
+    },
+    "gautham": {
+        "username": "gautham",
+        "password_hash": "scrypt:32768:8:1$pkatnV8DS1kx81Gn$98a0e874ea989607d0f4af762f6e03686b4cdda41c58f615c65a43a938e21b18338dd389e5681d0c9f093b75c7f3e3df574607a9402f1156b2a02cf8c2d39fd2",
+        "full_name": "Gautham Krishna",
+        "role": "student"
     }
 }
