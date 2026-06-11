@@ -18,13 +18,30 @@ def get_config():
             return {}
     return {}
 
-def get_user_filepath(username):
+def save_config(config_dict):
+    current_config = get_config()
+    current_config.update(config_dict)
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(current_config, f, indent=4)
+        return True
+    except Exception:
+        return False
+
+# Initialize Flask session secret key from config (or fallback)
+config = get_config()
+app.secret_key = config.get("secret_key")
+if not app.secret_key:
+    app.secret_key = "fdd54b2a-ef97-4669-a7c4-9a4fdd025981"
+    save_config({"secret_key": app.secret_key})
+
+def get_user_filepath(username, teams_sync_dir=None):
     config = get_config()
     username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
     if not username_clean:
         username_clean = "Default_User"
         
-    base_dir = config.get("teams_sync_dir", DEFAULT_USERS_DIR)
+    base_dir = teams_sync_dir or config.get("teams_sync_dir", DEFAULT_USERS_DIR)
     
     # If the user put a relative path, make it relative to this project
     if not os.path.isabs(base_dir):
@@ -109,8 +126,8 @@ def api_login():
 def api_get_config():
     cfg = get_config()
     return jsonify({
-        "start_date": config.get("start_date", "2026-06-01"),
-        "default_username": config.get("default_username", "")
+        "start_date": cfg.get("start_date", "2026-06-01"),
+        "default_username": cfg.get("default_username", "")
     })
 
 @app.route('/api/config', methods=['POST'])
@@ -196,10 +213,11 @@ def api_save_slot():
 @login_required
 def api_sync_day():
     import excel_manager
-    data = request.json
+    data = request.json or {}
     username = data.get('username')
     week_num = int(data.get('week_num'))
     day_num = int(data.get('day_num'))
+    teams_sync_dir = data.get('teams_sync_dir')
     
     if not username or not week_num or not day_num:
         return jsonify({"error": "Missing parameters"}), 400

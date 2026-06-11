@@ -11,10 +11,10 @@
         "full_name": "Test Intern Student",
         "role": "student"
     },
-    "test": {
-        "username": "test",
-        "password_hash": "scrypt:32768:8:1$2Uhe8epQCnbJ1coP$3eb1e79e722279df2d625aff759f02ab7d651d049d9a0e6e622821ec89cbb832d154f6f412ed87a813d57f0b761acf5137cfa9e4d33df3c0e09f673f8c7b924b",
-        "full_name": "test1",
+    "ck": {
+        "username": "ck",
+        "password_hash": "scrypt:32768:8:1$obqxG13XNOYRZlbX$bb69db3c858a310a22ec0f0ba27e2e71edd6a95c78554a9718f361486d47930344276a1b6d7ed92a547c65ddc31955ce53c5877f34a1ce9e7bb49c2f61fbdfdd",
+        "full_name": "Chakravarthy.p",
         "role": "student"
     }
 }
