@@ -3,161 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandhata Internship - Timesheet Tracker</title>
-    <!-- Google Fonts: Inter & Outfit -->
+    <title>Dashboard — LogiSync</title>
+    <meta name="description" content="LogiSync Internship Timesheet Dashboard. Log your daily work hours and sync with Microsoft Teams.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar Configuration Panel -->
-        <aside class="sidebar">
-            <div class="brand">
-                <i class="fa-solid fa-clock-rotate-left brand-icon"></i>
-                <div class="brand-text">
-                    <h1>Sandhata</h1>
-                    <span class="subtitle">Internship Tracker</span>
+    <div class="app-shell">
+
+        <!-- ═══ Sidebar ═══ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div class="sidebar-brand">
+                    <h1>LogiSync</h1>
+                    <span>Internship Tracker</span>
                 </div>
             </div>
-            
-            <form id="config-form" class="config-form">
-                <div class="form-group">
-                    <label for="username">
-                        <i class="fa-solid fa-user"></i> Logged In User
-                    </label>
-                    <input type="text" id="username" name="username" readonly style="background-color: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.05); cursor: not-allowed; opacity: 0.8;" required>
-                    <span class="form-help">This determines your folder name in Microsoft Teams.</span>
-                </div>
 
-                <div class="form-group">
-                    <label for="teams_sync_dir">
-                        <i class="fa-solid fa-folder-open"></i> Teams Sync Folder
-                    </label>
-                    <input type="text" id="teams_sync_dir" name="teams_sync_dir" placeholder="e.g. C:\\Users\\Chakku\\TeamsSync\\MyTeam">
-                    <span class="form-help">Enter the local folder synced by Microsoft Teams / OneDrive.</span>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="week_num">
-                            <i class="fa-solid fa-calendar-week"></i> Week
-                        </label>
-                        <select id="week_num" name="week_num" required>
-                            <!-- Dynamically generated weeks -->
-                            <option value="1">Week 1</option>
-                            <option value="2">Week 2</option>
-                            <option value="3">Week 3</option>
-                            <option value="4">Week 4</option>
-                            <option value="5">Week 5</option>
-                            <option value="6">Week 6</option>
-                            <option value="7">Week 7</option>
-                            <option value="8">Week 8</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="day_num">
-                            <i class="fa-solid fa-calendar-day"></i> Day
-                        </label>
-                        <select id="day_num" name="day_num" required>
-                            <option value="1">Day 1 (Mon)</option>
-                            <option value="2">Day 2 (Tue)</option>
-                            <option value="3">Day 3 (Wed)</option>
-                            <option value="4">Day 4 (Thu)</option>
-                            <option value="5">Day 5 (Fri)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="date_val">
-                        <i class="fa-solid fa-calendar-days"></i> Log Date
-                    </label>
-                    <input type="date" id="date_val" name="date_val" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="arrival_time">
-                        <i class="fa-solid fa-right-to-bracket"></i> Arrival Time
-                    </label>
-                    <input type="time" id="arrival_time" name="arrival_time" value="09:00" required>
-                </div>
-
-                <button type="submit" id="load-btn" class="btn btn-primary btn-block">
-                    <i class="fa-solid fa-rotate"></i> Load Timesheet
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Workspace</div>
+                <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Dashboard</span>
                 </button>
-            </form>
+                <button class="nav-item" data-view="timesheet" id="nav-timesheet">
+                    <i class="fa-solid fa-table-columns"></i>
+                    <span>Timesheet</span>
+                </button>
+                <button class="nav-item" data-view="activity" id="nav-activity">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Activity</span>
+                </button>
+
+                <div class="nav-section-label" style="margin-top: 0.75rem;">Settings</div>
+                <button class="nav-item" data-view="config" id="nav-config">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Configuration</span>
+                </button>
+            </nav>
 
             <div class="sidebar-footer">
-                <p><i class="fa-solid fa-circle-info"></i> Syncs automatically to your Teams cloud directory.</p>
+                <div class="sidebar-user">
+                    <div class="user-avatar" id="user-avatar">{{ session_user.full_name[:2] | upper if session_user.full_name else 'U' }}</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-display-name">{{ session_user.full_name or 'User' }}</div>
+                        <div class="user-role">{{ session_user.role or 'student' }}</div>
+                    </div>
+                </div>
+                <a href="/logout" class="nav-item" style="margin-top: 0.25rem; color: var(--text-muted);">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
             </div>
         </aside>
 
-        <!-- Main Content Panel -->
-        <main class="main-content">
-            <!-- Header bar -->
-            <header class="main-header">
-                <div class="header-left">
-                    <h2 id="current-title">Timesheet Log</h2>
-                    <span id="current-date-badge" class="date-badge">Select a day to begin</span>
-                    <span id="current-path-badge" class="date-badge hidden"></span>
-                </div>
-                <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
-                    <div id="connection-status" class="status-indicator">
-                        <span class="dot dot-success"></span>
-                        <span class="status-text">Local Server Connected</span>
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- ═══ Main Area ═══ -->
+        <div class="main-area">
+
+            <!-- Top Header -->
+            <header class="top-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="header-left">
+                        <span class="header-greeting" id="header-greeting">Good afternoon</span>
+                        <span class="header-date" id="header-date"></span>
                     </div>
-                    <a href="/logout" class="btn btn-logout btn-sm" style="background-color: rgba(255, 255, 255, 0.05); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: var(--radius-sm);">
-                        <i class="fa-solid fa-right-from-bracket"></i> Logout
-                    </a>
+                </div>
+                <div class="header-right">
+                    <div class="header-badge" id="connection-badge">
+                        <span class="dot"></span>
+                        <span>Connected</span>
+                    </div>
                 </div>
             </header>
 
-            <!-- Loading overlay inside content -->
-            <div id="loading-state" class="loading-state hidden">
-                <div class="spinner"></div>
-                <p>Loading timesheet data from Excel...</p>
-            </div>
+            <!-- ═══ Page Content ═══ -->
+            <div class="page-content">
 
-            <!-- Content Area: Initial state (prompt to select) -->
-            <div id="empty-state" class="empty-state">
-                <div class="empty-illustration">
-                    <i class="fa-solid fa-file-invoice"></i>
-                </div>
-                <h3>No Timesheet Loaded</h3>
-                <p>Please select your username, date, and arrival time in the sidebar, then click <strong>Load Timesheet</strong> to display and log your daily work hours.</p>
-            </div>
-
-            <!-- Content Area: Active slots -->
-            <div id="timesheet-area" class="timesheet-area hidden">
-                <div id="slots-container" class="slots-container">
-                    <!-- Dynamic Slot Cards will be rendered here by JS -->
-                </div>
-
-                <!-- Sync action banner -->
-                <div class="action-banner">
-                    <div class="banner-info">
-                        <h4>Ready to sync your work summaries?</h4>
-                        <p>This compiles all individual slot entries and copies them to the primary daily log (Sheet1).</p>
+                <!-- ── VIEW: Dashboard Overview ── -->
+                <div id="view-dashboard" class="view-panel">
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid" id="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label"><i class="fa-solid fa-clock"></i> Hours Today</div>
+                            <div class="kpi-value" id="kpi-hours">0</div>
+                            <div class="kpi-change">Based on your arrival time</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label"><i class="fa-solid fa-list-check"></i> Slots Filled</div>
+                            <div class="kpi-value" id="kpi-slots">0 / 0</div>
+                            <div class="kpi-change">Work blocks with entries</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label"><i class="fa-solid fa-calendar-week"></i> Current Week</div>
+                            <div class="kpi-value" id="kpi-week">—</div>
+                            <div class="kpi-change" id="kpi-day-label">Select a date to begin</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label"><i class="fa-solid fa-cloud-arrow-up"></i> Sync Status</div>
+                            <div class="kpi-value" id="kpi-sync" style="font-size: 1.1rem;">Not synced</div>
+                            <div class="kpi-change">Last sync to MS Teams</div>
+                        </div>
                     </div>
-                    <div class="banner-actions">
-                        <button id="sync-btn" class="btn btn-success btn-large">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Sync & Save to MS Teams
+
+                    <!-- Quick Start Prompt -->
+                    <div class="empty-state" id="dashboard-empty">
+                        <div class="empty-icon">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <h3>No Timesheet Loaded</h3>
+                        <p>Go to <strong>Timesheet</strong> or <strong>Configuration</strong> to select your date and load your daily work slots.</p>
+                        <button class="btn btn-primary btn-lg" style="margin-top: 1.25rem;" id="goto-timesheet-btn">
+                            <i class="fa-solid fa-table-columns"></i> Open Timesheet
+                        </button>
+                    </div>
+
+                    <!-- Timesheet Quick View (shown after loading) -->
+                    <div id="dashboard-loaded" class="hidden">
+                        <div class="timesheet-section">
+                            <div class="timesheet-section-header">
+                                <h3><i class="fa-solid fa-table-columns"></i> Today's Time Blocks</h3>
+                                <span class="badge badge-info" id="timesheet-date-badge"></span>
+                            </div>
+                            <div class="slots-container" id="slots-container">
+                                <!-- Slots rendered by JS -->
+                            </div>
+                            <div class="sync-banner" id="sync-banner">
+                                <div class="sync-banner-info">
+                                    <h4>Ready to sync?</h4>
+                                    <p>Compile all entries and copy them to the primary daily log (Sheet1).</p>
+                                </div>
+                                <button id="sync-btn" class="btn btn-success btn-lg">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Sync to Teams
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── VIEW: Timesheet (same as dashboard loaded, can navigate here directly) ── -->
+                <div id="view-timesheet" class="view-panel hidden">
+                    <div class="empty-state" id="timesheet-empty">
+                        <div class="empty-icon">
+                            <i class="fa-solid fa-calendar-day"></i>
+                        </div>
+                        <h3>Select a Date</h3>
+                        <p>Use the <strong>Configuration</strong> panel to set your date and arrival time, then click <strong>Load Timesheet</strong>.</p>
+                        <button class="btn btn-primary btn-lg" style="margin-top: 1.25rem;" id="goto-config-btn2">
+                            <i class="fa-solid fa-gear"></i> Open Configuration
                         </button>
                     </div>
                 </div>
-            </div>
-        </main>
-    </div>
 
-    <!-- Notification Toast Container -->
+                <!-- ── VIEW: Activity Feed ── -->
+                <div id="view-activity" class="view-panel hidden">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Recent Activity
+                    </h3>
+                    <div class="card" id="activity-feed">
+                        <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                            <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.4;"></i>
+                            Activity events will appear here as you use the platform.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── VIEW: Configuration ── -->
+                <div id="view-config" class="view-panel hidden">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-gear" style="color: var(--accent);"></i> Timesheet Configuration
+                    </h3>
+                    <div class="card" style="max-width: 540px;">
+                        <form id="config-form" class="config-panel">
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-username">
+                                    <i class="fa-solid fa-user"></i> Logged In User
+                                </label>
+                                <input type="text" id="cfg-username" class="form-input" readonly style="opacity: 0.7; cursor: not-allowed;" required>
+                                <span class="form-hint">Your folder name in Microsoft Teams.</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-teams-dir">
+                                    <i class="fa-solid fa-folder-open"></i> Teams Sync Folder
+                                </label>
+                                <input type="text" id="cfg-teams-dir" class="form-input" placeholder="e.g. C:\Users\Chakku\TeamsSync\MyTeam">
+                                <span class="form-hint">Local folder synced by Microsoft Teams / OneDrive.</span>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="cfg-week">
+                                        <i class="fa-solid fa-calendar-week"></i> Week
+                                    </label>
+                                    <select id="cfg-week" class="form-select" required>
+                                        <option value="1">Week 1</option>
+                                        <option value="2">Week 2</option>
+                                        <option value="3">Week 3</option>
+                                        <option value="4">Week 4</option>
+                                        <option value="5">Week 5</option>
+                                        <option value="6">Week 6</option>
+                                        <option value="7">Week 7</option>
+                                        <option value="8">Week 8</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="cfg-day">
+                                        <i class="fa-solid fa-calendar-day"></i> Day
+                                    </label>
+                                    <select id="cfg-day" class="form-select" required>
+                                        <option value="1">Day 1 (Mon)</option>
+                                        <option value="2">Day 2 (Tue)</option>
+                                        <option value="3">Day 3 (Wed)</option>
+                                        <option value="4">Day 4 (Thu)</option>
+                                        <option value="5">Day 5 (Fri)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-date">
+                                    <i class="fa-solid fa-calendar-days"></i> Log Date
+                                </label>
+                                <input type="date" id="cfg-date" class="form-input" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-arrival">
+                                    <i class="fa-solid fa-right-to-bracket"></i> Arrival Time
+                                </label>
+                                <input type="time" id="cfg-arrival" class="form-input" value="09:00" required>
+                            </div>
+
+                            <button type="submit" id="load-btn" class="btn btn-primary btn-block btn-lg">
+                                <i class="fa-solid fa-rotate"></i> Load Timesheet
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div><!-- /page-content -->
+        </div><!-- /main-area -->
+    </div><!-- /app-shell -->
+
+    <!-- Toast -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Frontend Script -->
     <script src="/static/app.js"></script>
 </body>
 </html>

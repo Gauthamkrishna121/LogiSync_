@@ -3,311 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Sandhata Internship Tracker</title>
-    <!-- Google Fonts: Inter & Outfit -->
+    <title>Admin — LogiSync Coordinator Portal</title>
+    <meta name="description" content="LogiSync Admin Portal for managing internship students, settings, and Teams sync configuration.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
-    <style>
-        .admin-grid {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        @media (max-width: 1024px) {
-            .admin-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .admin-sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .admin-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-md);
-            backdrop-filter: blur(10px);
-        }
-
-        .admin-card h3 {
-            font-family: var(--font-heading);
-            font-size: 1.15rem;
-            font-weight: 600;
-            margin-bottom: 1.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.75rem;
-            color: var(--text-primary);
-        }
-
-        .admin-card h3 i {
-            color: var(--color-primary);
-        }
-
-        .admin-table-container {
-            overflow-x: auto;
-            margin-top: 1rem;
-        }
-
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        .admin-table th {
-            font-family: var(--font-heading);
-            font-weight: 600;
-            color: var(--text-secondary);
-            padding: 1rem;
-            border-bottom: 2px solid var(--border-color);
-            font-size: 0.9rem;
-        }
-
-        .admin-table td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
-            font-size: 0.925rem;
-        }
-
-        .admin-table tr:hover {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.25rem 0.6rem;
-            border-radius: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .badge-success {
-            background-color: rgba(16, 185, 129, 0.15);
-            color: var(--color-success);
-            border: 1px solid rgba(16, 185, 129, 0.25);
-        }
-
-        .badge-danger {
-            background-color: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.25);
-        }
-
-        .badge-warning {
-            background-color: rgba(245, 158, 11, 0.15);
-            color: var(--color-warning);
-            border: 1px solid rgba(245, 158, 11, 0.25);
-        }
-
-        .btn-sm {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-            border-radius: var(--radius-sm);
-        }
-
-        .btn-danger {
-            background-color: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        .btn-danger:hover {
-            background-color: #ef4444;
-            color: #ffffff;
-            transform: translateY(-1px);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            color: var(--color-primary);
-            border: 1px solid var(--color-primary);
-        }
-
-        .btn-outline:hover {
-            background-color: var(--color-primary);
-            color: #ffffff;
-            transform: translateY(-1px);
-        }
-
-        .btn-logout {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-logout:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-        }
-
-        .profile-pic-placeholder {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: rgba(58, 134, 200, 0.2);
-            color: var(--color-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.9rem;
-            font-family: var(--font-heading);
-        }
-
-        .student-meta {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .actions-cell {
-            display: flex;
-            gap: 0.5rem;
-        }
-    </style>
 </head>
 <body>
-    <div class="app-container" style="flex-direction: column;">
-        <!-- Top Sticky Header -->
-        <header class="main-header" style="position: static;">
-            <div class="header-left">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.75rem; color: var(--color-primary);"></i>
-                    <div>
-                        <h2 style="margin: 0; line-height: 1.1;">Sandhata Coordinator Portal</h2>
-                        <span class="date-badge" style="margin-top: 0.1rem;">LogiSync Admin Controls</span>
-                    </div>
+    <div class="app-shell">
+
+        <!-- ═══ Sidebar ═══ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div class="sidebar-brand">
+                    <h1>LogiSync</h1>
+                    <span>Coordinator Portal</span>
                 </div>
             </div>
-            <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
-                <div class="status-indicator">
-                    <span class="dot dot-success"></span>
-                    <span class="status-text">Coordinator Mode</span>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Management</div>
+                <button class="nav-item active" data-view="students" id="nav-students">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Students</span>
+                </button>
+                <button class="nav-item" data-view="settings" id="nav-settings">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>Settings</span>
+                </button>
+                <button class="nav-item" data-view="add-student" id="nav-add-student">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Add Student</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="user-avatar">{{ session_user.full_name[:2] | upper if session_user.full_name else 'A' }}</div>
+                    <div class="user-info">
+                        <div class="user-name">{{ session_user.full_name or 'Admin' }}</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
                 </div>
-                <a href="/logout" class="btn btn-logout">
-                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                <a href="/logout" class="nav-item" style="margin-top: 0.25rem; color: var(--text-muted);">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
                 </a>
             </div>
-        </header>
+        </aside>
 
-        <!-- Admin Workspace Dashboard -->
-        <main class="main-content" style="height: auto; flex-grow: 1;">
-            <div class="admin-grid">
-                
-                <!-- Left Sidebar: Settings and Add Student Form -->
-                <div class="admin-sidebar">
-                    
-                    <!-- Global Configuration -->
-                    <div class="admin-card">
-                        <h3><i class="fa-solid fa-gears"></i> Global Settings</h3>
-                        <form id="global-config-form" class="login-form">
-                            <div class="form-group">
-                                <label for="teams_sync_dir">
-                                    <i class="fa-solid fa-folder-open"></i> Teams Sync Root Folder
-                                </label>
-                                <input type="text" id="teams_sync_dir" name="teams_sync_dir" placeholder="e.g. users or C:/TeamsSync" required>
-                                <span class="form-help">Where individual student folders will be hosted.</span>
-                            </div>
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-                            <div class="form-group">
-                                <label for="start_date">
-                                    <i class="fa-solid fa-calendar-day"></i> Internship Start Date
-                                </label>
-                                <input type="date" id="start_date" name="start_date" required>
-                                <span class="form-help">Used to automatically sync timesheets to the correct Week & Day sheet rows.</span>
-                            </div>
+        <!-- ═══ Main Area ═══ -->
+        <div class="main-area">
 
-                            <button type="submit" id="save-config-btn" class="btn btn-primary btn-block">
-                                <i class="fa-solid fa-floppy-disk"></i> Save Settings
-                            </button>
-                        </form>
+            <header class="top-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="header-left">
+                        <span class="header-greeting">Coordinator Portal</span>
+                        <span class="header-date" id="header-date"></span>
                     </div>
-
-                    <!-- Create Student Account Form -->
-                    <div class="admin-card">
-                        <h3><i class="fa-solid fa-user-plus"></i> Add Student Profile</h3>
-                        <form id="add-student-form" class="login-form">
-                            <div class="form-group">
-                                <label for="username">
-                                    <i class="fa-solid fa-user-tag"></i> Login Username
-                                </label>
-                                <input type="text" id="username" name="username" placeholder="e.g. gautham" required pattern="^[a-zA-Z0-9_-]+$" title="Only letters, numbers, underscores and dashes are allowed.">
-                                <span class="form-help">Lowercased, unique login name.</span>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="full_name">
-                                    <i class="fa-solid fa-id-card"></i> Student Full Name
-                                </label>
-                                <input type="text" id="full_name" name="full_name" placeholder="e.g. Gautham Krishna" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="password">
-                                    <i class="fa-solid fa-key"></i> Temporary Password
-                                </label>
-                                <input type="text" id="password" name="password" placeholder="Enter password" required>
-                            </div>
-
-                            <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin: 0.5rem 0;">
-                                <input type="checkbox" id="auto_create_folder" name="auto_create_folder" checked style="width: auto;">
-                                <label for="auto_create_folder" style="font-size: 0.8rem; cursor: pointer; display: inline;">
-                                    Auto-create folder & spreadsheet
-                                </label>
-                            </div>
-
-                            <button type="submit" id="add-student-btn" class="btn btn-success btn-block">
-                                <i class="fa-solid fa-user-check"></i> Register Intern
-                            </button>
-                        </form>
-                    </div>
-
                 </div>
+                <div class="header-right">
+                    <div class="header-badge">
+                        <span class="dot"></span>
+                        <span>Admin Mode</span>
+                    </div>
+                </div>
+            </header>
 
-                <!-- Right Side: Students Roster list -->
-                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    
-                    <div class="admin-card" style="flex-grow: 1;">
-                        <h3><i class="fa-solid fa-users"></i> Registered Student Roster</h3>
-                        
-                        <div class="admin-table-container">
-                            <table class="admin-table" id="students-table">
+            <div class="page-content">
+
+                <!-- ── VIEW: Students Roster ── -->
+                <div id="view-students" class="view-panel">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-users" style="color: var(--accent);"></i> Student Roster
+                        </h3>
+                        <button class="btn btn-primary btn-sm" id="btn-goto-add">
+                            <i class="fa-solid fa-plus"></i> Add Student
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="data-table-container">
+                            <table class="data-table" id="students-table">
                                 <thead>
                                     <tr>
-                                        <th>Student / Intern</th>
-                                        <th>Teams Sync Path</th>
-                                        <th>Folder Status</th>
-                                        <th>Excel Sync Template</th>
+                                        <th>Student</th>
+                                        <th>Sync Path</th>
+                                        <th>Folder</th>
+                                        <th>Excel</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="students-table-body">
-                                    <!-- Dynamic content generated by JS -->
                                     <tr>
                                         <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-                                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                                            <div class="spinner spinner-sm" style="margin: 0 auto 0.75rem;"></div>
                                             Loading student database...
                                         </td>
                                     </tr>
@@ -315,14 +117,90 @@
                             </table>
                         </div>
                     </div>
-
                 </div>
 
+                <!-- ── VIEW: Settings ── -->
+                <div id="view-settings" class="view-panel hidden">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-gears" style="color: var(--accent);"></i> Global Settings
+                    </h3>
+                    <div class="card" style="max-width: 540px;">
+                        <form id="global-config-form" class="config-panel">
+                            <div class="form-group">
+                                <label class="form-label" for="adm-teams-dir">
+                                    <i class="fa-solid fa-folder-open"></i> Teams Sync Root Folder
+                                </label>
+                                <input type="text" id="adm-teams-dir" class="form-input" placeholder="e.g. users or C:/TeamsSync" required>
+                                <span class="form-hint">Root directory where student folders are stored.</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="adm-start-date">
+                                    <i class="fa-solid fa-calendar-day"></i> Internship Start Date
+                                </label>
+                                <input type="date" id="adm-start-date" class="form-input" required>
+                                <span class="form-hint">Used to auto-calculate Week & Day numbers.</span>
+                            </div>
+                            <button type="submit" id="save-config-btn" class="btn btn-primary btn-block btn-lg">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── VIEW: Add Student ── -->
+                <div id="view-add-student" class="view-panel hidden">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-user-plus" style="color: var(--accent);"></i> Register New Student
+                    </h3>
+                    <div class="card" style="max-width: 540px;">
+                        <form id="add-student-form" class="config-panel">
+                            <div class="form-group">
+                                <label class="form-label" for="stu-username">
+                                    <i class="fa-solid fa-at"></i> Login Username
+                                </label>
+                                <input type="text" id="stu-username" class="form-input" placeholder="e.g. gautham" required pattern="^[a-zA-Z0-9_-]+$" title="Only letters, numbers, underscores and dashes">
+                                <span class="form-hint">Lowercased, unique login name.</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="stu-fullname">
+                                    <i class="fa-solid fa-id-card"></i> Full Name
+                                </label>
+                                <input type="text" id="stu-fullname" class="form-input" placeholder="e.g. Gautham Krishna" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="stu-password">
+                                    <i class="fa-solid fa-key"></i> Temporary Password
+                                </label>
+                                <input type="text" id="stu-password" class="form-input" placeholder="Enter password" required>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="auto-create-folder" checked>
+                                <label for="auto-create-folder">Auto-create folder & spreadsheet</label>
+                            </div>
+                            <button type="submit" id="add-student-btn" class="btn btn-success btn-block btn-lg">
+                                <i class="fa-solid fa-user-check"></i> Register Intern
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div><!-- /page-content -->
+        </div><!-- /main-area -->
+    </div><!-- /app-shell -->
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay hidden" id="confirm-modal">
+        <div class="modal-card">
+            <h3 id="modal-title">Confirm Action</h3>
+            <p id="modal-message">Are you sure?</p>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+                <button class="btn btn-danger" id="modal-confirm">Confirm</button>
             </div>
-        </main>
+        </div>
     </div>
 
-    <!-- Notification Toast Container -->
+    <!-- Toast -->
     <div id="toast-container" class="toast-container"></div>
 
     <script src="/static/admin.js"></script>

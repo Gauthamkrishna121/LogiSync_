@@ -1,33 +1,133 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM elements
+    // ═══════════════════════════════════════
+    // DOM REFERENCES
+    // ═══════════════════════════════════════
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+
     const globalConfigForm = document.getElementById('global-config-form');
-    const teamsSyncDirInput = document.getElementById('teams_sync_dir');
-    const startDateInput = document.getElementById('start_date');
+    const teamsSyncDirInput = document.getElementById('adm-teams-dir');
+    const startDateInput = document.getElementById('adm-start-date');
     const saveConfigBtn = document.getElementById('save-config-btn');
 
     const addStudentForm = document.getElementById('add-student-form');
-    const studentUsernameInput = document.getElementById('username');
-    const studentFullNameInput = document.getElementById('full_name');
-    const studentPasswordInput = document.getElementById('password');
-    const autoCreateCheckbox = document.getElementById('auto_create_folder');
+    const stuUsernameInput = document.getElementById('stu-username');
+    const stuFullNameInput = document.getElementById('stu-fullname');
+    const stuPasswordInput = document.getElementById('stu-password');
+    const autoCreateCheckbox = document.getElementById('auto-create-folder');
     const addStudentBtn = document.getElementById('add-student-btn');
 
     const studentsTableBody = document.getElementById('students-table-body');
 
-    let globalConfig = {
-        teams_sync_dir: 'users',
-        start_date: '2026-06-01'
-    };
+    // Modal
+    const confirmModal = document.getElementById('confirm-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalCancel = document.getElementById('modal-cancel');
+    const modalConfirm = document.getElementById('modal-confirm');
+    let modalCallback = null;
 
-    // Initialize Page
+    let globalConfig = { teams_sync_dir: 'users', start_date: '2026-06-01' };
+
+    // ═══════════════════════════════════════
+    // HEADER DATE
+    // ═══════════════════════════════════════
+    const headerDateEl = document.getElementById('header-date');
+    if (headerDateEl) {
+        headerDateEl.textContent = new Date().toLocaleDateString('en-US', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+    }
+
+    // ═══════════════════════════════════════
+    // SIDEBAR NAVIGATION
+    // ═══════════════════════════════════════
+    const navItems = document.querySelectorAll('.nav-item[data-view]');
+    const viewPanels = document.querySelectorAll('.view-panel');
+
+    function switchView(viewName) {
+        viewPanels.forEach(p => p.classList.add('hidden'));
+        navItems.forEach(n => n.classList.remove('active'));
+
+        const panel = document.getElementById(`view-${viewName}`);
+        const navBtn = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+
+        if (panel) {
+            panel.classList.remove('hidden');
+            panel.style.animation = 'none';
+            panel.offsetHeight;
+            panel.style.animation = 'fadeInUp 0.3s var(--ease-out)';
+        }
+        if (navBtn) navBtn.classList.add('active');
+
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('active');
+    }
+
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const view = item.getAttribute('data-view');
+            if (view) switchView(view);
+        });
+    });
+
+    // "Add Student" shortcut button
+    const btnGotoAdd = document.getElementById('btn-goto-add');
+    if (btnGotoAdd) btnGotoAdd.addEventListener('click', () => switchView('add-student'));
+
+    // Mobile sidebar
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('active');
+        });
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
+
+    // ═══════════════════════════════════════
+    // MODAL SYSTEM
+    // ═══════════════════════════════════════
+    function showModal(title, message, onConfirm) {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modalCallback = onConfirm;
+        confirmModal.classList.remove('hidden');
+    }
+
+    function hideModal() {
+        confirmModal.classList.add('hidden');
+        modalCallback = null;
+    }
+
+    modalCancel.addEventListener('click', hideModal);
+    modalConfirm.addEventListener('click', () => {
+        if (modalCallback) modalCallback();
+        hideModal();
+    });
+
+    confirmModal.addEventListener('click', (e) => {
+        if (e.target === confirmModal) hideModal();
+    });
+
+    // ═══════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════
     loadConfig();
     loadStudents();
 
-    // 1. Config Loading & Saving
+    // ═══════════════════════════════════════
+    // CONFIG
+    // ═══════════════════════════════════════
     function loadConfig() {
         fetch('/api/admin/config')
             .then(res => {
-                if (!res.ok) throw new Error('Failed to load global configurations.');
+                if (!res.ok) throw new Error('Failed to load config.');
                 return res.json();
             })
             .then(data => {
@@ -59,99 +159,86 @@ document.addEventListener('DOMContentLoaded', () => {
             globalConfig = data.config;
             saveConfigBtn.disabled = false;
             saveConfigBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Settings';
-            showToast('Configuration settings updated successfully!', 'success');
-            // Reload students list since folder existence paths might have changed
+            showToast('Settings saved successfully!', 'success');
             loadStudents();
         })
         .catch(err => {
             saveConfigBtn.disabled = false;
             saveConfigBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Settings';
-            showToast(err.message, 'warning');
+            showToast(err.message, 'error');
         });
     });
 
-    // 2. Student Profiles CRUD operations
+    // ═══════════════════════════════════════
+    // STUDENTS
+    // ═══════════════════════════════════════
     function loadStudents() {
         fetch('/api/admin/students')
             .then(res => {
-                if (!res.ok) throw new Error('Failed to retrieve student roster.');
+                if (!res.ok) throw new Error('Failed to load students.');
                 return res.json();
             })
-            .then(students => {
-                renderStudents(students);
-            })
+            .then(students => renderStudents(students))
             .catch(err => {
                 studentsTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: var(--color-warning); padding: 2rem;">
-                            <i class="fa-solid fa-circle-exclamation" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
-                            ${err.message}
-                        </td>
-                    </tr>
+                    <tr><td colspan="5" style="text-align: center; color: var(--warning); padding: 2rem;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                        ${err.message}
+                    </td></tr>
                 `;
             });
     }
 
     function renderStudents(students) {
         studentsTableBody.innerHTML = '';
+
         if (students.length === 0) {
             studentsTableBody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-                        <i class="fa-solid fa-users-slash" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
-                        No student accounts registered yet.
-                    </td>
-                </tr>
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                    <i class="fa-solid fa-users-slash" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
+                    No student accounts registered yet.
+                </td></tr>
             `;
             return;
         }
 
         students.forEach(s => {
             const tr = document.createElement('tr');
-            
-            // Name initials avatar placeholder
             const initials = s.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            
-            // folder path display
             const pathDisplay = `${globalConfig.teams_sync_dir}/${s.username}`;
 
-            // folder status badge
-            const folderBadge = s.folder_exists 
-                ? '<span class="badge badge-success"><i class="fa-solid fa-folder-check"></i> Created</span>'
-                : '<span class="badge badge-warning"><i class="fa-solid fa-folder-plus"></i> Missing</span>';
+            const folderBadge = s.folder_exists
+                ? '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Created</span>'
+                : '<span class="badge badge-warning"><i class="fa-solid fa-plus"></i> Missing</span>';
 
-            // excel status badge
             const excelBadge = s.excel_exists
-                ? '<span class="badge badge-success"><i class="fa-solid fa-file-excel"></i> Initialized</span>'
-                : '<span class="badge badge-danger"><i class="fa-solid fa-file-circle-exclamation"></i> Missing</span>';
+                ? '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Ready</span>'
+                : '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Missing</span>';
 
-            // create folder button
-            const folderBtn = s.folder_exists && s.excel_exists
-                ? ''
-                : `<button class="btn btn-outline btn-sm create-folder-btn" data-username="${s.username}">
-                     <i class="fa-solid fa-folder-plus"></i> Create Folder & Log
-                   </button>`;
+            const folderBtn = (s.folder_exists && s.excel_exists) ? '' : `
+                <button class="btn btn-outline btn-sm create-folder-btn" data-username="${s.username}">
+                    <i class="fa-solid fa-folder-plus"></i> Create
+                </button>
+            `;
 
             tr.innerHTML = `
                 <td>
-                    <div class="student-meta">
-                        <div class="profile-pic-placeholder">${initials}</div>
+                    <div class="student-cell">
+                        <div class="student-avatar">${initials}</div>
                         <div>
-                            <div style="font-weight: 600; color: var(--text-primary);">${s.full_name}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">@${s.username}</div>
+                            <div class="student-name">${s.full_name}</div>
+                            <div class="student-username">@${s.username}</div>
                         </div>
                     </div>
                 </td>
-                <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary); max-width: 250px; overflow-wrap: break-word;">
-                    ${pathDisplay}
-                </td>
+                <td class="path-cell">${pathDisplay}</td>
                 <td>${folderBadge}</td>
                 <td>${excelBadge}</td>
                 <td>
                     <div class="actions-cell">
                         ${folderBtn}
                         <button class="btn btn-danger btn-sm delete-student-btn" data-username="${s.username}" data-name="${s.full_name}">
-                            <i class="fa-solid fa-user-xmark"></i> Remove
+                            <i class="fa-solid fa-trash-can"></i>
                         </button>
                     </div>
                 </td>
@@ -160,31 +247,30 @@ document.addEventListener('DOMContentLoaded', () => {
             studentsTableBody.appendChild(tr);
         });
 
-        // Add event listeners dynamically to buttons
+        // Event listeners
         document.querySelectorAll('.create-folder-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const username = btn.getAttribute('data-username');
-                createStudentFolder(username);
-            });
+            btn.addEventListener('click', () => createStudentFolder(btn.getAttribute('data-username')));
         });
 
         document.querySelectorAll('.delete-student-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', () => {
                 const username = btn.getAttribute('data-username');
                 const name = btn.getAttribute('data-name');
-                if (confirm(`Are you sure you want to delete the student profile for "${name}" (@${username})?`)) {
-                    deleteStudent(username);
-                }
+                showModal(
+                    'Delete Student',
+                    `Are you sure you want to remove "${name}" (@${username})? This action cannot be undone.`,
+                    () => deleteStudent(username)
+                );
             });
         });
     }
 
-    // Add Student Profile Form Submission
+    // Add Student
     addStudentForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const username = studentUsernameInput.value.trim().toLowerCase();
-        const full_name = studentFullNameInput.value.trim();
-        const password = studentPasswordInput.value;
+        const username = stuUsernameInput.value.trim().toLowerCase();
+        const full_name = stuFullNameInput.value.trim();
+        const password = stuPasswordInput.value;
         const auto_create_folder = autoCreateCheckbox.checked;
 
         addStudentBtn.disabled = true;
@@ -196,33 +282,27 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ username, full_name, password, auto_create_folder })
         })
         .then(res => {
-            if (!res.ok) {
-                return res.json().then(data => {
-                    throw new Error(data.error || 'Failed to register student.');
-                });
-            }
+            if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed.'); });
             return res.json();
         })
         .then(data => {
             addStudentBtn.disabled = false;
             addStudentBtn.innerHTML = '<i class="fa-solid fa-user-check"></i> Register Intern';
-            showToast(`Registered profile for ${data.student.full_name} successfully!`, 'success');
-            
-            // Reset form fields
-            studentUsernameInput.value = '';
-            studentFullNameInput.value = '';
-            studentPasswordInput.value = '';
-            
+            showToast(`Registered ${data.student.full_name} successfully!`, 'success');
+            stuUsernameInput.value = '';
+            stuFullNameInput.value = '';
+            stuPasswordInput.value = '';
             loadStudents();
+            switchView('students');
         })
         .catch(err => {
             addStudentBtn.disabled = false;
             addStudentBtn.innerHTML = '<i class="fa-solid fa-user-check"></i> Register Intern';
-            showToast(err.message, 'warning');
+            showToast(err.message, 'error');
         });
     });
 
-    // Create Student Folder & Template Spreadsheet
+    // Create Folder
     function createStudentFolder(username) {
         fetch('/api/admin/create-folder', {
             method: 'POST',
@@ -230,62 +310,53 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ username })
         })
         .then(res => {
-            if (!res.ok) {
-                return res.json().then(data => {
-                    throw new Error(data.error || 'Failed to create student folder.');
-                });
-            }
-            return res.json();
-        })
-        .then(data => {
-            showToast(`Sync folder and log sheet initialized for @${username}!`, 'success');
-            loadStudents();
-        })
-        .catch(err => showToast(err.message, 'warning'));
-    }
-
-    // Delete Student Profile
-    function deleteStudent(username) {
-        fetch(`/api/admin/students/${username}`, {
-            method: 'DELETE'
-        })
-        .then(res => {
-            if (!res.ok) {
-                return res.json().then(data => {
-                    throw new Error(data.error || 'Failed to delete student.');
-                });
-            }
+            if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed.'); });
             return res.json();
         })
         .then(() => {
-            showToast(`Successfully deleted student account: @${username}`, 'success');
+            showToast(`Folder initialized for @${username}!`, 'success');
             loadStudents();
         })
-        .catch(err => showToast(err.message, 'warning'));
+        .catch(err => showToast(err.message, 'error'));
     }
 
-    // Toast Utility
+    // Delete Student
+    function deleteStudent(username) {
+        fetch(`/api/admin/students/${username}`, { method: 'DELETE' })
+        .then(res => {
+            if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed.'); });
+            return res.json();
+        })
+        .then(() => {
+            showToast(`Deleted @${username} successfully.`, 'success');
+            loadStudents();
+        })
+        .catch(err => showToast(err.message, 'error'));
+    }
+
+    // ═══════════════════════════════════════
+    // TOAST
+    // ═══════════════════════════════════════
     function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
-        let iconHtml = '<i class="fa-solid fa-circle-info toast-icon"></i>';
-        if (type === 'success') {
-            iconHtml = '<i class="fa-solid fa-circle-check toast-icon"></i>';
-        } else if (type === 'warning') {
-            iconHtml = '<i class="fa-solid fa-triangle-exclamation toast-icon"></i>';
-        }
+
+        const icons = {
+            success: 'fa-circle-check',
+            warning: 'fa-triangle-exclamation',
+            error: 'fa-circle-xmark',
+            info: 'fa-circle-info'
+        };
 
         toast.innerHTML = `
-            ${iconHtml}
+            <i class="fa-solid ${icons[type] || icons.info} toast-icon"></i>
             <span class="toast-message">${message}</span>
         `;
-        
+
         container.appendChild(toast);
-        
         setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s forwards';
+            toast.style.animation = 'slideOutRight 0.3s ease forwards';
             setTimeout(() => toast.remove(), 300);
         }, 4000);
     }
