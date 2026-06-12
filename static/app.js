@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .then(() => {
                 syncBtn.disabled = false;
-                syncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Sync to Teams';
+                syncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Sync & Publish';
                 showToast('Synced to daily log successfully!', 'success');
                 addActivity('Synced to Teams', `Week ${week_num}, Day ${day_num}`);
 
@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(err => {
                 syncBtn.disabled = false;
-                syncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Sync to Teams';
+                syncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Sync & Publish';
                 showToast(err.message, 'error');
             });
         });

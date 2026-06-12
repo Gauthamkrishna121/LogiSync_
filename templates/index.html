@@ -17,12 +17,12 @@
         <!-- ═══ Sidebar ═══ -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
+                <div class="sidebar-logo" style="background: transparent; box-shadow: none;">
+                    <img src="/static/logo.png" alt="LogiSync Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
                 </div>
                 <div class="sidebar-brand">
                     <h1>LogiSync</h1>
-                    <span>Internship Tracker</span>
+                    <span>Workspace Portal</span>
                 </div>
             </div>
 
@@ -96,22 +96,22 @@
                     <!-- KPI Cards -->
                     <div class="kpi-grid" id="kpi-grid">
                         <div class="kpi-card">
-                            <div class="kpi-label"><i class="fa-solid fa-clock"></i> Hours Today</div>
+                            <div class="kpi-label"><i class="fa-solid fa-clock"></i> Hours Tracked</div>
                             <div class="kpi-value" id="kpi-hours">0</div>
                             <div class="kpi-change">Based on your arrival time</div>
                         </div>
                         <div class="kpi-card">
-                            <div class="kpi-label"><i class="fa-solid fa-list-check"></i> Slots Filled</div>
+                            <div class="kpi-label"><i class="fa-solid fa-list-check"></i> Blocks Logged</div>
                             <div class="kpi-value" id="kpi-slots">0 / 0</div>
                             <div class="kpi-change">Work blocks with entries</div>
                         </div>
                         <div class="kpi-card">
-                            <div class="kpi-label"><i class="fa-solid fa-calendar-week"></i> Current Week</div>
+                            <div class="kpi-label"><i class="fa-solid fa-calendar-week"></i> Active Week</div>
                             <div class="kpi-value" id="kpi-week">—</div>
                             <div class="kpi-change" id="kpi-day-label">Select a date to begin</div>
                         </div>
                         <div class="kpi-card">
-                            <div class="kpi-label"><i class="fa-solid fa-cloud-arrow-up"></i> Sync Status</div>
+                            <div class="kpi-label"><i class="fa-solid fa-cloud-arrow-up"></i> Cloud Integration</div>
                             <div class="kpi-value" id="kpi-sync" style="font-size: 1.1rem;">Not synced</div>
                             <div class="kpi-change">Last sync to MS Teams</div>
                         </div>
@@ -122,10 +122,10 @@
                         <div class="empty-icon">
                             <i class="fa-solid fa-file-invoice"></i>
                         </div>
-                        <h3>No Timesheet Loaded</h3>
-                        <p>Go to <strong>Timesheet</strong> or <strong>Configuration</strong> to select your date and load your daily work slots.</p>
+                        <h3>No active timesheet</h3>
+                        <p>Ready to start your day? Head over to the Configuration panel to select your log date and load your daily timesheet.</p>
                         <button class="btn btn-primary btn-lg" style="margin-top: 1.25rem;" id="goto-timesheet-btn">
-                            <i class="fa-solid fa-table-columns"></i> Open Timesheet
+                            <i class="fa-solid fa-table-columns"></i> Initialize Workspace
                         </button>
                     </div>
 
@@ -133,7 +133,7 @@
                     <div id="dashboard-loaded" class="hidden">
                         <div class="timesheet-section">
                             <div class="timesheet-section-header">
-                                <h3><i class="fa-solid fa-table-columns"></i> Today's Time Blocks</h3>
+                                <h3><i class="fa-solid fa-table-columns"></i> Today's Schedule</h3>
                                 <span class="badge badge-info" id="timesheet-date-badge"></span>
                             </div>
                             <div class="slots-container" id="slots-container">
@@ -141,11 +141,11 @@
                             </div>
                             <div class="sync-banner" id="sync-banner">
                                 <div class="sync-banner-info">
-                                    <h4>Ready to sync?</h4>
-                                    <p>Compile all entries and copy them to the primary daily log (Sheet1).</p>
+                                    <h4>Timesheet ready for sync!</h4>
+                                    <p>Publish your time blocks directly to your Teams daily Excel sheet.</p>
                                 </div>
                                 <button id="sync-btn" class="btn btn-success btn-lg">
-                                    <i class="fa-solid fa-cloud-arrow-up"></i> Sync to Teams
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Sync & Publish
                                 </button>
                             </div>
                         </div>
