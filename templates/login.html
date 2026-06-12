@@ -3,205 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sandhata Internship Tracker</title>
-    <!-- Google Fonts: Inter & Outfit -->
+    <title>Login — LogiSync</title>
+    <meta name="description" content="Sign in to your LogiSync Internship Timesheet Portal to log daily work hours and sync with Microsoft Teams.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
-    <style>
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background-image: radial-gradient(circle at 50% 50%, rgba(28, 37, 65, 0.8) 0%, rgba(11, 19, 43, 1) 100%);
-            padding: 1.5rem;
-        }
-
-        .login-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 2.5rem;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(15px);
-            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .login-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--color-primary), var(--color-success));
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .login-brand {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .login-brand i {
-            font-size: 2.5rem;
-            color: var(--color-primary);
-        }
-
-        .login-brand h1 {
-            font-family: var(--font-heading);
-            font-size: 2rem;
-            font-weight: 700;
-            line-height: 1.1;
-        }
-
-        .login-header p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
-        }
-
-        .login-footer {
-            text-align: center;
-            margin-top: 1.5rem;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-    </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="login-header">
-            <div class="login-brand">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <h1>Sandhata</h1>
+    <div class="auth-page">
+
+        <!-- Left: Brand Showcase -->
+        <div class="auth-showcase">
+            <div class="auth-particles" id="particles"></div>
+            <div class="showcase-content">
+                <div class="showcase-logo">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <h2>Welcome back to LogiSync</h2>
+                <p>Your internship timesheet platform. Track hours, sync with Microsoft Teams, and keep your daily work logs organized effortlessly.</p>
+                <div class="showcase-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">8h</div>
+                        <div class="stat-label">Daily Tracking</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Auto</div>
+                        <div class="stat-label">Teams Sync</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Excel</div>
+                        <div class="stat-label">Log Export</div>
+                    </div>
+                </div>
             </div>
-            <p>Internship Timesheet Portal</p>
         </div>
 
-        <form id="login-form" class="login-form">
-            <div class="form-group">
-                <label for="username">
-                    <i class="fa-solid fa-user"></i> Username
-                </label>
-                <input type="text" id="username" name="username" placeholder="Enter username" required autocomplete="username">
+        <!-- Right: Login Form -->
+        <div class="auth-form-panel">
+            <div class="auth-form-container">
+                <div class="auth-form-header">
+                    <h2>Sign in</h2>
+                    <p>Enter your credentials to access your workspace</p>
+                </div>
+
+                <form id="login-form" class="auth-form" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="login-username">
+                            <i class="fa-solid fa-user"></i> Username
+                        </label>
+                        <input
+                            type="text"
+                            id="login-username"
+                            class="form-input"
+                            placeholder="Enter your username"
+                            required
+                            autocomplete="username"
+                            autofocus
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="login-password">
+                            <i class="fa-solid fa-lock"></i> Password
+                        </label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="login-password"
+                                class="form-input"
+                                placeholder="Enter your password"
+                                required
+                                autocomplete="current-password"
+                            >
+                            <button type="button" class="toggle-password" id="toggle-pw" aria-label="Toggle password visibility">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="remember-me">
+                        <label for="remember-me">Remember me</label>
+                    </div>
+
+                    <button type="submit" id="login-btn" class="btn btn-primary btn-block btn-lg">
+                        <i class="fa-solid fa-right-to-bracket"></i> Sign in
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Don't have an account? <a href="/register">Create one</a></p>
+                </div>
             </div>
-
-            <div class="form-group">
-                <label for="password">
-                    <i class="fa-solid fa-lock"></i> Password
-                </label>
-                <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password">
-            </div>
-
-            <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
-                <i class="fa-solid fa-right-to-bracket"></i> Login
-            </button>
-        </form>
-
-        <div class="login-footer">
-            <p>&copy; 2026 Sandhata Internship Management</p>
         </div>
     </div>
 
-    <!-- Notification Toast Container -->
+    <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('login-form');
-            const submitBtn = document.getElementById('submit-btn');
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('login-form');
+        const btn = document.getElementById('login-btn');
+        const usernameInput = document.getElementById('login-username');
+        const passwordInput = document.getElementById('login-password');
+        const togglePw = document.getElementById('toggle-pw');
 
-            loginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value;
-
-                if (!username || !password) {
-                    showToast('Please fill in all fields.', 'warning');
-                    return;
-                }
-
-                // Show loading status
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
-
-                fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || 'Login failed.');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    showToast('Login successful! Redirecting...', 'success');
-                    setTimeout(() => {
-                        if (data.user.role === 'admin') {
-                            window.location.href = '/admin';
-                        } else {
-                            window.location.href = '/';
-                        }
-                    }, 1000);
-                })
-                .catch(err => {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Login';
-                    showToast(err.message, 'warning');
-                });
-            });
-
-            // Toast Utility
-            function showToast(message, type = 'info') {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = `toast toast-${type}`;
-                
-                let iconHtml = '<i class="fa-solid fa-circle-info toast-icon"></i>';
-                if (type === 'success') {
-                    iconHtml = '<i class="fa-solid fa-circle-check toast-icon"></i>';
-                } else if (type === 'warning') {
-                    iconHtml = '<i class="fa-solid fa-triangle-exclamation toast-icon"></i>';
-                }
-
-                toast.innerHTML = `
-                    ${iconHtml}
-                    <span class="toast-message">${message}</span>
-                `;
-                
-                container.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.style.animation = 'fadeOut 0.3s forwards';
-                    setTimeout(() => toast.remove(), 300);
-                }, 4000);
-            }
+        // Toggle password visibility
+        togglePw.addEventListener('click', () => {
+            const isHidden = passwordInput.type === 'password';
+            passwordInput.type = isHidden ? 'text' : 'password';
+            togglePw.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
         });
+
+        // Login submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            // Clear previous errors
+            usernameInput.classList.remove('is-error');
+            passwordInput.classList.remove('is-error');
+
+            if (!username) {
+                usernameInput.classList.add('is-error');
+                showToast('Please enter your username.', 'warning');
+                usernameInput.focus();
+                return;
+            }
+            if (!password) {
+                passwordInput.classList.add('is-error');
+                showToast('Please enter your password.', 'warning');
+                passwordInput.focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Login failed.'); });
+                return res.json();
+            })
+            .then(data => {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Success!';
+                btn.style.backgroundColor = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                showToast('Login successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = data.user.role === 'admin' ? '/admin' : '/';
+                }, 800);
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign in';
+                btn.style.backgroundColor = '';
+                btn.style.borderColor = '';
+                passwordInput.classList.add('is-error');
+                showToast(err.message, 'error');
+
+                // Shake animation
+                form.style.animation = 'none';
+                form.offsetHeight; // trigger reflow
+                form.style.animation = 'shake 0.4s ease';
+            });
+        });
+
+        // Particle generation
+        const particlesEl = document.getElementById('particles');
+        if (particlesEl) {
+            for (let i = 0; i < 20; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (8 + Math.random() * 12) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+                particlesEl.appendChild(p);
+            }
+        }
+
+        // Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            const icons = {
+                success: 'fa-circle-check',
+                warning: 'fa-triangle-exclamation',
+                error: 'fa-circle-xmark',
+                info: 'fa-circle-info'
+            };
+
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.info} toast-icon"></i>
+                <span class="toast-message">${message}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOutRight 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    });
     </script>
+
+    <style>
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-6px); }
+        40%, 80% { transform: translateX(6px); }
+    }
+    </style>
 </body>
 </html>

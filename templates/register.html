@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — LogiSync</title>
+    <meta name="description" content="Create your LogiSync account to start tracking internship hours and syncing timesheets.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-page">
+
+        <!-- Left: Brand Showcase -->
+        <div class="auth-showcase">
+            <div class="auth-particles" id="particles"></div>
+            <div class="showcase-content">
+                <div class="showcase-logo">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <h2>Join LogiSync</h2>
+                <p>Create your account and start tracking your internship hours. Seamless time logging with automatic Excel generation and Microsoft Teams sync.</p>
+                <div class="showcase-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">2-min</div>
+                        <div class="stat-label">Quick Setup</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Auto</div>
+                        <div class="stat-label">Time Slots</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Cloud</div>
+                        <div class="stat-label">Teams Sync</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Registration Form -->
+        <div class="auth-form-panel">
+            <div class="auth-form-container">
+                <div class="auth-form-header">
+                    <h2>Create account</h2>
+                    <p>Fill in your details to get started</p>
+                </div>
+
+                <form id="register-form" class="auth-form" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="reg-fullname">
+                            <i class="fa-solid fa-id-card"></i> Full Name
+                        </label>
+                        <input
+                            type="text"
+                            id="reg-fullname"
+                            class="form-input"
+                            placeholder="e.g. Gautham Krishna"
+                            required
+                            autofocus
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reg-username">
+                            <i class="fa-solid fa-at"></i> Username
+                        </label>
+                        <input
+                            type="text"
+                            id="reg-username"
+                            class="form-input"
+                            placeholder="e.g. gautham"
+                            required
+                            autocomplete="username"
+                        >
+                        <span class="form-hint" id="username-feedback">Letters, numbers, underscores, hyphens only. Min 3 characters.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reg-email">
+                            <i class="fa-solid fa-envelope"></i> Email <span style="color: var(--text-muted); font-weight: 400;">(optional)</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="reg-email"
+                            class="form-input"
+                            placeholder="e.g. you@example.com"
+                            autocomplete="email"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reg-password">
+                            <i class="fa-solid fa-lock"></i> Password
+                        </label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="reg-password"
+                                class="form-input"
+                                placeholder="Min 6 characters"
+                                required
+                                autocomplete="new-password"
+                            >
+                            <button type="button" class="toggle-password" id="toggle-pw1" aria-label="Toggle password visibility">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength" id="pw-strength">
+                            <div class="strength-bar" id="str-1"></div>
+                            <div class="strength-bar" id="str-2"></div>
+                            <div class="strength-bar" id="str-3"></div>
+                            <div class="strength-bar" id="str-4"></div>
+                        </div>
+                        <span class="strength-label" id="pw-label"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reg-confirm">
+                            <i class="fa-solid fa-shield-halved"></i> Confirm Password
+                        </label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="reg-confirm"
+                                class="form-input"
+                                placeholder="Re-enter your password"
+                                required
+                                autocomplete="new-password"
+                            >
+                            <button type="button" class="toggle-password" id="toggle-pw2" aria-label="Toggle password visibility">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <span class="form-error hidden" id="confirm-error">
+                            <i class="fa-solid fa-circle-xmark"></i> Passwords do not match
+                        </span>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="terms" required>
+                        <label for="terms">I agree to the terms of use</label>
+                    </div>
+
+                    <button type="submit" id="register-btn" class="btn btn-primary btn-block btn-lg">
+                        <i class="fa-solid fa-user-plus"></i> Create Account
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="/login">Sign in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('register-form');
+        const btn = document.getElementById('register-btn');
+        const fullnameInput = document.getElementById('reg-fullname');
+        const usernameInput = document.getElementById('reg-username');
+        const emailInput = document.getElementById('reg-email');
+        const passwordInput = document.getElementById('reg-password');
+        const confirmInput = document.getElementById('reg-confirm');
+        const termsCheckbox = document.getElementById('terms');
+
+        // Toggle password visibility
+        document.getElementById('toggle-pw1').addEventListener('click', () => {
+            const hidden = passwordInput.type === 'password';
+            passwordInput.type = hidden ? 'text' : 'password';
+            document.getElementById('toggle-pw1').querySelector('i').className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
+        document.getElementById('toggle-pw2').addEventListener('click', () => {
+            const hidden = confirmInput.type === 'password';
+            confirmInput.type = hidden ? 'text' : 'password';
+            document.getElementById('toggle-pw2').querySelector('i').className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
+
+        // Username availability check (debounced)
+        let usernameTimer = null;
+        usernameInput.addEventListener('input', () => {
+            clearTimeout(usernameTimer);
+            const val = usernameInput.value.trim();
+            const feedback = document.getElementById('username-feedback');
+
+            usernameInput.classList.remove('is-error', 'is-success');
+            feedback.className = 'form-hint';
+
+            if (val.length < 3) {
+                feedback.textContent = 'Min 3 characters required.';
+                return;
+            }
+            if (!/^[a-zA-Z0-9_-]+$/.test(val)) {
+                feedback.textContent = 'Only letters, numbers, underscores, hyphens.';
+                usernameInput.classList.add('is-error');
+                return;
+            }
+
+            feedback.textContent = 'Checking availability...';
+
+            usernameTimer = setTimeout(() => {
+                fetch('/api/check-username', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: val })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.available) {
+                        feedback.textContent = '✓ Username is available';
+                        feedback.className = 'form-hint';
+                        feedback.style.color = 'var(--success)';
+                        usernameInput.classList.add('is-success');
+                    } else {
+                        feedback.textContent = '✗ ' + data.reason;
+                        feedback.style.color = 'var(--error)';
+                        usernameInput.classList.add('is-error');
+                    }
+                })
+                .catch(() => {
+                    feedback.textContent = 'Could not check availability.';
+                    feedback.style.color = 'var(--warning)';
+                });
+            }, 400);
+        });
+
+        // Password strength meter
+        passwordInput.addEventListener('input', () => {
+            const val = passwordInput.value;
+            const bars = [
+                document.getElementById('str-1'),
+                document.getElementById('str-2'),
+                document.getElementById('str-3'),
+                document.getElementById('str-4')
+            ];
+            const label = document.getElementById('pw-label');
+
+            let score = 0;
+            if (val.length >= 6) score++;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+            if (/[0-9]/.test(val) || /[^a-zA-Z0-9]/.test(val)) score++;
+
+            const levels = ['', 'weak', 'fair', 'good', 'strong'];
+            const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+
+            bars.forEach((bar, i) => {
+                bar.className = 'strength-bar';
+                if (i < score) {
+                    bar.classList.add('active', levels[score]);
+                }
+            });
+
+            label.textContent = val.length > 0 ? labels[score] || '' : '';
+        });
+
+        // Confirm password match
+        confirmInput.addEventListener('input', () => {
+            const errEl = document.getElementById('confirm-error');
+            if (confirmInput.value && confirmInput.value !== passwordInput.value) {
+                errEl.classList.remove('hidden');
+                confirmInput.classList.add('is-error');
+            } else {
+                errEl.classList.add('hidden');
+                confirmInput.classList.remove('is-error');
+            }
+        });
+
+        // Form submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const full_name = fullnameInput.value.trim();
+            const username = usernameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const confirm_password = confirmInput.value;
+
+            // Validation
+            if (!full_name) { showToast('Please enter your full name.', 'warning'); fullnameInput.focus(); return; }
+            if (username.length < 3) { showToast('Username must be at least 3 characters.', 'warning'); usernameInput.focus(); return; }
+            if (password.length < 6) { showToast('Password must be at least 6 characters.', 'warning'); passwordInput.focus(); return; }
+            if (password !== confirm_password) { showToast('Passwords do not match.', 'warning'); confirmInput.focus(); return; }
+            if (!termsCheckbox.checked) { showToast('Please agree to the terms of use.', 'warning'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account...';
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name, username, email, password, confirm_password })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Registration failed.'); });
+                return res.json();
+            })
+            .then(data => {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Account Created!';
+                btn.style.backgroundColor = 'var(--success)';
+                btn.style.borderColor = 'var(--success)';
+                showToast('Registration successful! Redirecting to login...', 'success');
+                setTimeout(() => { window.location.href = '/login'; }, 1500);
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create Account';
+                btn.style.backgroundColor = '';
+                btn.style.borderColor = '';
+                showToast(err.message, 'error');
+            });
+        });
+
+        // Particles
+        const particlesEl = document.getElementById('particles');
+        if (particlesEl) {
+            for (let i = 0; i < 20; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (8 + Math.random() * 12) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+                particlesEl.appendChild(p);
+            }
+        }
+
+        // Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = { success: 'fa-circle-check', warning: 'fa-triangle-exclamation', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} toast-icon"></i><span class="toast-message">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOutRight 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    });
+    </script>
+</body>
+</html>

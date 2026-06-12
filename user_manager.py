@@ -1,86 +1,196 @@
 import os
 import json
+import sqlite3
+from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
-USERS_FILE = "users.json"
+DB_FILE = "users.db"
+LEGACY_USERS_FILE = "users.json"
 
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        # Initialize default admin
-        users = {
-            "admin": {
-                "username": "admin",
-                "password_hash": generate_password_hash("AdminPassword123!"),
-                "full_name": "Team Leader",
-                "role": "admin"
-            }
-        }
-        save_users(users)
-        return users
 
+def get_db():
+    """Get a database connection with row factory."""
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+
+def init_db():
+    """Initialize the database schema and migrate legacy data."""
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            full_name TEXT NOT NULL,
+            email TEXT DEFAULT '',
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'student',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    conn.commit()
+
+    # Check if we need to seed the default admin
+    cursor = conn.execute("SELECT COUNT(*) FROM users")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        # Try to migrate from legacy JSON file
+        if os.path.exists(LEGACY_USERS_FILE):
+            _migrate_from_json(conn)
+        else:
+            # Seed default admin account
+            conn.execute(
+                "INSERT INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+                ("admin", "Team Leader", "", generate_password_hash("AdminPassword123!"), "admin")
+            )
+            conn.commit()
+
+    conn.close()
+
+
+def _migrate_from_json(conn):
+    """Migrate users from legacy users.json to SQLite."""
     try:
-        with open(USERS_FILE, 'r') as f:
-            return json.load(f)
-    except Exception:
-        # Fallback in case of corruption
-        return {}
+        with open(LEGACY_USERS_FILE, 'r') as f:
+            legacy_users = json.load(f)
 
-def save_users(users):
-    try:
-        with open(USERS_FILE, 'w') as f:
-            json.dump(users, f, indent=4)
-        return True
-    except Exception:
-        return False
+        for username, info in legacy_users.items():
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        info.get("username", username),
+                        info.get("full_name", username),
+                        info.get("email", ""),
+                        info.get("password_hash", generate_password_hash("changeme")),
+                        info.get("role", "student")
+                    )
+                )
+            except Exception:
+                continue
+
+        conn.commit()
+        print(f"[user_manager] Migrated {len(legacy_users)} users from {LEGACY_USERS_FILE} to {DB_FILE}")
+    except Exception as e:
+        print(f"[user_manager] Migration warning: {e}")
+
+
+def _row_to_dict(row):
+    """Convert a sqlite3.Row to a plain dict."""
+    if row is None:
+        return None
+    return dict(row)
+
 
 def authenticate_user(username, password):
-    users = load_users()
-    username_lower = username.strip().lower()
-    if username_lower in users:
-        user = users[username_lower]
-        if check_password_hash(user["password_hash"], password):
-            return user
+    """Authenticate a user by username and password."""
+    conn = get_db()
+    cursor = conn.execute("SELECT * FROM users WHERE username = ?", (username.strip().lower(),))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row and check_password_hash(row["password_hash"], password):
+        return _row_to_dict(row)
     return None
 
-def create_user(username, full_name, password, role="student"):
-    users = load_users()
+
+def create_user(username, full_name, password, role="student", email=""):
+    """Create a new user account."""
     username_clean = "".join(c for c in username if c.isalnum() or c in ('_', '-')).strip().lower()
-    
+
     if not username_clean:
         raise ValueError("Invalid username. Only alphanumeric characters, underscores, and hyphens are allowed.")
-        
-    if username_clean in users:
+
+    if len(username_clean) < 3:
+        raise ValueError("Username must be at least 3 characters long.")
+
+    if len(password) < 6:
+        raise ValueError("Password must be at least 6 characters long.")
+
+    conn = get_db()
+
+    # Check if username exists
+    cursor = conn.execute("SELECT id FROM users WHERE username = ?", (username_clean,))
+    if cursor.fetchone():
+        conn.close()
         raise ValueError(f"User '{username_clean}' already exists.")
-        
-    users[username_clean] = {
-        "username": username_clean,
-        "password_hash": generate_password_hash(password),
-        "full_name": full_name.strip(),
-        "role": role
-    }
-    
-    save_users(users)
-    return users[username_clean]
+
+    # Check if email exists (if provided)
+    if email and email.strip():
+        cursor = conn.execute("SELECT id FROM users WHERE email = ? AND email != ''", (email.strip().lower(),))
+        if cursor.fetchone():
+            conn.close()
+            raise ValueError(f"Email '{email}' is already registered.")
+
+    conn.execute(
+        "INSERT INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+        (username_clean, full_name.strip(), email.strip().lower() if email else "", generate_password_hash(password), role)
+    )
+    conn.commit()
+
+    cursor = conn.execute("SELECT * FROM users WHERE username = ?", (username_clean,))
+    user = _row_to_dict(cursor.fetchone())
+    conn.close()
+    return user
+
 
 def delete_user(username):
-    users = load_users()
+    """Delete a user by username."""
     username_clean = username.strip().lower()
     if username_clean == "admin":
         raise ValueError("Cannot delete the primary admin account.")
-    if username_clean in users:
-        del users[username_clean]
-        save_users(users)
-        return True
-    return False
+
+    conn = get_db()
+    cursor = conn.execute("DELETE FROM users WHERE username = ?", (username_clean,))
+    conn.commit()
+    deleted = cursor.rowcount > 0
+    conn.close()
+    return deleted
+
 
 def list_students():
-    users = load_users()
-    students = []
-    for username, info in users.items():
-        if info.get("role") == "student":
-            students.append({
-                "username": info["username"],
-                "full_name": info["full_name"],
-                "role": info["role"]
-            })
+    """List all users with role 'student'."""
+    conn = get_db()
+    cursor = conn.execute("SELECT username, full_name, email, role, created_at FROM users WHERE role = 'student' ORDER BY created_at DESC")
+    students = [_row_to_dict(row) for row in cursor.fetchall()]
+    conn.close()
     return students
+
+
+def get_user_by_username(username):
+    """Get a single user by username."""
+    conn = get_db()
+    cursor = conn.execute("SELECT * FROM users WHERE username = ?", (username.strip().lower(),))
+    user = _row_to_dict(cursor.fetchone())
+    conn.close()
+    return user
+
+
+def username_exists(username):
+    """Check if a username is already taken."""
+    conn = get_db()
+    cursor = conn.execute("SELECT id FROM users WHERE username = ?", (username.strip().lower(),))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+
+def email_exists(email):
+    """Check if an email is already registered."""
+    if not email or not email.strip():
+        return False
+    conn = get_db()
+    cursor = conn.execute("SELECT id FROM users WHERE email = ? AND email != ''", (email.strip().lower(),))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
+
+
+# Initialize database on module import
+def load_users():
+    """Legacy compatibility wrapper — initializes the SQLite DB."""
+    init_db()
