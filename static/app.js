@@ -164,6 +164,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════
+    // COLLAPSIBLE SIDEBAR TOGGLE
+    // ═══════════════════════════════════════
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mainArea = document.querySelector('.main-area');
+
+    if (localStorage.getItem('sidebar-collapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+        if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-collapsed-width)';
+    }
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebar-collapsed', isCollapsed);
+            if (mainArea) {
+                mainArea.style.marginLeft = isCollapsed
+                    ? 'var(--sidebar-collapsed-width)'
+                    : 'var(--sidebar-width)';
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════
     // LOAD CONFIG FROM BACKEND
     // ═══════════════════════════════════════
     fetch('/api/config')

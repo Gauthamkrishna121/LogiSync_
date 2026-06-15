@@ -28,25 +28,32 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-section-label">Workspace</div>
-                <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+                <button class="nav-item active" data-view="dashboard" data-tooltip="Dashboard" id="nav-dashboard">
                     <i class="fa-solid fa-house"></i>
                     <span>Dashboard</span>
                 </button>
-                <button class="nav-item" data-view="timesheet" id="nav-timesheet">
+                <button class="nav-item" data-view="timesheet" data-tooltip="Timesheet" id="nav-timesheet">
                     <i class="fa-solid fa-table-columns"></i>
                     <span>Timesheet</span>
                 </button>
-                <button class="nav-item" data-view="activity" id="nav-activity">
+                <button class="nav-item" data-view="activity" data-tooltip="Activity" id="nav-activity">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Activity</span>
                 </button>
 
                 <div class="nav-section-label" style="margin-top: 0.75rem;">Settings</div>
-                <button class="nav-item" data-view="config" id="nav-config">
+                <button class="nav-item" data-view="config" data-tooltip="Configuration" id="nav-config">
                     <i class="fa-solid fa-gear"></i>
                     <span>Configuration</span>
                 </button>
             </nav>
+
+            <div class="sidebar-toggle-wrapper">
+                <button class="nav-item sidebar-toggle-btn" id="sidebar-toggle" aria-label="Toggle sidebar" data-tooltip="Expand">
+                    <i class="fa-solid fa-chevron-left toggle-icon"></i>
+                    <span class="toggle-text">Collapse Sidebar</span>
+                </button>
+            </div>
 
             <div class="sidebar-footer">
                 <div class="sidebar-user">
@@ -56,7 +63,7 @@
                         <div class="user-role">{{ session_user.role or 'student' }}</div>
                     </div>
                 </div>
-                <a href="/logout" class="nav-item" style="margin-top: 0.25rem; color: var(--text-muted);">
+                <a href="/logout" class="nav-item" data-tooltip="Logout" style="margin-top: 0.25rem; color: var(--text-muted);">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     <span>Logout</span>
                 </a>
