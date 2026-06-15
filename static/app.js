@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     
     function initTheme() {
-        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const savedTheme = 'light'; // Force light theme to start
         setTheme(savedTheme);
     }
     
@@ -171,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (localStorage.getItem('sidebar-collapsed') === 'true') {
         sidebar.classList.add('collapsed');
-        if (mainArea) mainArea.style.marginLeft = 'var(--sidebar-collapsed-width)';
     }
 
     if (sidebarToggle) {
@@ -179,11 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sidebar.classList.toggle('collapsed');
             const isCollapsed = sidebar.classList.contains('collapsed');
             localStorage.setItem('sidebar-collapsed', isCollapsed);
-            if (mainArea) {
-                mainArea.style.marginLeft = isCollapsed
-                    ? 'var(--sidebar-collapsed-width)'
-                    : 'var(--sidebar-width)';
-            }
         });
     }
 

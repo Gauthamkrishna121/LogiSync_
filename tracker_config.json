@@ -1,6 +1,6 @@
 {
     "start_date": "2026-06-01",
-    "default_username": "test",
+    "default_username": "ck",
     "teams_sync_dir": "users",
     "secret_key": "fdd54b2a-ef97-4669-a7c4-9a4fdd025981"
 }
