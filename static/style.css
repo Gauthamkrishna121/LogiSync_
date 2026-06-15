@@ -75,6 +75,7 @@
 
     /* Layout */
     --sidebar-width: 256px;
+    --sidebar-collapsed-width: 72px;
     --header-height: 64px;
 }
 
@@ -140,9 +141,65 @@ h1, h2, h3, h4 {
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
-    transition: transform var(--t-slow) var(--ease-out);
-    overflow: hidden;
+    transition: width var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out);
 }
+
+/* ── Collapsed state ── */
+.sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+.sidebar.collapsed .sidebar-header { padding: 1.25rem 0.5rem; justify-content: center; }
+.sidebar.collapsed .sidebar-logo { display: flex; width: 32px; height: 32px; }
+.sidebar.collapsed .sidebar-brand { opacity: 0; width: 0; overflow: hidden; pointer-events: none; display: none; }
+.sidebar.collapsed .sidebar-nav { padding: 0.75rem 0.5rem; align-items: center; }
+.sidebar.collapsed .nav-section-label { opacity: 0; height: 0; padding: 0; overflow: hidden; pointer-events: none; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 0.65rem; width: 44px; height: 44px; border-radius: var(--radius-md); overflow: hidden; }
+.sidebar.collapsed .nav-item span { opacity: 0; width: 0; position: absolute; pointer-events: none; }
+.sidebar.collapsed .nav-item.active::before { top: 0; bottom: 0; }
+.sidebar.collapsed .sidebar-footer { padding: 0.75rem 0.5rem; }
+.sidebar.collapsed .sidebar-user { justify-content: center; padding: 0.4rem; }
+.sidebar.collapsed .user-info { opacity: 0; width: 0; overflow: hidden; pointer-events: none; }
+
+/* ── Toggle button (moved to bottom) ── */
+.sidebar-toggle-wrapper {
+    padding: 0 0.75rem 0.5rem;
+}
+.sidebar-toggle-btn {
+    background: var(--accent) !important;
+    color: white !important;
+    justify-content: center;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    font-weight: 600;
+}
+.sidebar-toggle-btn:hover {
+    background: var(--accent-bright) !important;
+    color: white !important;
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45) !important;
+}
+.sidebar-toggle-btn .toggle-icon {
+    transition: transform var(--t-normal) var(--ease-out);
+}
+.sidebar.collapsed .sidebar-toggle-btn .toggle-icon {
+    transform: rotate(180deg);
+}
+.sidebar.collapsed .sidebar-toggle-btn .toggle-text {
+    display: none;
+}
+
+/* ── Collapsed tooltips ── */
+.sidebar.collapsed .nav-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: calc(100% + 12px); top: 50%;
+    transform: translateY(-50%) scale(0.9);
+    background: #1e1b4b; color: #fff;
+    padding: 0.35rem 0.7rem; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600;
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; z-index: 99;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.15s ease, transform 0.15s var(--ease-spring);
+}
+.sidebar.collapsed .nav-item[data-tooltip]:hover::after { opacity: 1; transform: translateY(-50%) scale(1); }
 
 .sidebar-header {
     padding: 1.5rem 1.25rem;
@@ -170,10 +227,20 @@ h1, h2, h3, h4 {
     text-transform: uppercase; letter-spacing: 1.5px;
 }
 
+.sidebar-brand {
+    overflow: hidden; white-space: nowrap;
+    transition: opacity var(--t-normal) ease, width var(--t-normal) ease;
+}
+
 .sidebar-nav {
     flex: 1; padding: 1rem 0.75rem;
-    overflow-y: auto; display: flex;
+    overflow-y: auto; overflow-x: hidden;
+    display: flex;
     flex-direction: column; gap: 4px;
+    scrollbar-width: none; /* Firefox */
+}
+.sidebar-nav::-webkit-scrollbar { 
+    display: none; /* Chrome, Safari, Edge */
 }
 
 .nav-section-label {
@@ -189,10 +256,15 @@ h1, h2, h3, h4 {
     color: var(--sb-text); font-size: 0.875rem; font-weight: 500;
     cursor: pointer; transition: all var(--t-fast) ease;
     border: none; background: none; width: 100%; text-align: left;
-    text-decoration: none;
+    text-decoration: none; position: relative;
 }
 
 .nav-item i { width: 18px; text-align: center; font-size: 0.95rem; flex-shrink: 0; }
+
+.nav-item span {
+    white-space: nowrap; overflow: hidden;
+    transition: opacity var(--t-normal) ease, width var(--t-normal) ease;
+}
 
 .nav-item:hover { background: var(--sb-hover); color: var(--sb-text-active); }
 
@@ -239,6 +311,7 @@ h1, h2, h3, h4 {
 
 .user-info .user-name { font-size: 0.82rem; font-weight: 600; color: #ffffff; }
 .user-info .user-role { font-size: 0.68rem; color: rgba(255, 255, 255, 0.45); text-transform: capitalize; }
+.user-info { overflow: hidden; white-space: nowrap; transition: opacity var(--t-normal) ease, width var(--t-normal) ease; }
 
 
 /* ─── Main Content ─── */
@@ -248,6 +321,11 @@ h1, h2, h3, h4 {
     display: flex; flex-direction: column;
     min-height: 100vh;
     transition: margin-left var(--t-slow) var(--ease-out);
+}
+
+.sidebar.collapsed ~ .sidebar-overlay + .main-area,
+.sidebar.collapsed ~ .main-area {
+    margin-left: var(--sidebar-collapsed-width);
 }
 
 /* ─── Top Header (Floating Glassmorphism style) ─── */
@@ -984,10 +1062,17 @@ h1, h2, h3, h4 {
 }
 
 @media (max-width: 768px) {
-    .sidebar { transform: translateX(-100%); z-index: 50; width: 272px; }
+    .sidebar { transform: translateX(-100%); z-index: 50; width: 272px !important; }
+    .sidebar.collapsed { width: 272px !important; }
     .sidebar.open { transform: translateX(0); }
+    .sidebar.open .sidebar-brand { opacity: 1; width: auto; }
+    .sidebar.open .nav-section-label { opacity: 1; height: auto; padding: 0.75rem 0.75rem 0.35rem; }
+    .sidebar.open .nav-item { width: 100%; height: auto; justify-content: flex-start; padding: 0.65rem 0.85rem; }
+    .sidebar.open .nav-item span { opacity: 1; width: auto; position: static; }
+    .sidebar.open .user-info { opacity: 1; width: auto; }
     .sidebar-overlay.active { display: block; }
-    .main-area { margin-left: 0; }
+    .sidebar-toggle { display: none !important; }
+    .main-area { margin-left: 0 !important; }
     .mobile-menu-btn { display: flex; }
     .top-header { padding: 0 1.25rem; }
     .page-content { padding: 1.25rem; }
