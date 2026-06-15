@@ -21,8 +21,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardLoaded = document.getElementById('dashboard-loaded');
     const timesheetDateBadge = document.getElementById('timesheet-date-badge');
 
+    // Weekly history elements
+    const timesheetLoaded = document.getElementById('timesheet-loaded');
+    const timesheetEmpty = document.getElementById('timesheet-empty');
+    const timesheetWeekBadge = document.getElementById('timesheet-week-badge');
+    const weekDaysGrid = document.getElementById('week-days-grid');
+
     // Activity log stored locally
     const activityLog = [];
+
+    // Current app state cache
+    let currentWeekNum = 1;
+    let currentDayNum = 1;
+    let currentSlots = [];
+
+    // ═══════════════════════════════════════
+    // THEME CONTROLLER
+    // ═══════════════════════════════════════
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        setTheme(savedTheme);
+    }
+    
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        if (themeToggleBtn) {
+            const icon = themeToggleBtn.querySelector('i');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+        }
+    }
+    
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
+    }
+    
+    initTheme();
 
     // ═══════════════════════════════════════
     // GREETING & DATE
@@ -82,6 +124,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Close mobile sidebar
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('active');
+
+        // If transitioning to timesheet view, load the weekly history summary
+        if (viewName === 'timesheet') {
+            const week_num = parseInt(cfgWeek.value) || currentWeekNum || 1;
+            loadWeeklyProgress(week_num);
+        }
     }
 
     navItems.forEach(item => {
@@ -194,13 +242,22 @@ document.addEventListener('DOMContentLoaded', () => {
             loadBtn.disabled = false;
             loadBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Load Timesheet';
 
+            // Save state cache
+            currentWeekNum = week_num;
+            currentDayNum = day_num;
+            currentSlots = data.slots;
+
             // Update KPIs
             updateKPIs(data.slots, week_num, day_num);
+            updateKPIRings(data.slots, week_num);
 
             // Switch to dashboard and show loaded content
             dashboardEmpty.classList.add('hidden');
             dashboardLoaded.classList.remove('hidden');
             timesheetDateBadge.textContent = `Week ${week_num}, Day ${day_num} • ${date_val}`;
+
+            // Render visual Day Timeline
+            renderDayTimeline(data.slots, arrival_time);
 
             // Also make timesheet view mirror dashboard
             const timesheetEmpty = document.getElementById('timesheet-empty');
@@ -315,17 +372,54 @@ document.addEventListener('DOMContentLoaded', () => {
                             data-row="${slot.row}"
                             placeholder="What did you work on during this block?"
                         >${slot.activity || ''}</textarea>
+                        <div class="slot-suggestions">
+                            <button class="suggestion-chip" data-text="💻 Development: Implemented codebase features and visual upgrades.">
+                                <i class="fa-solid fa-code"></i> Dev
+                            </button>
+                            <button class="suggestion-chip" data-text="🤝 Team Sync: Attended daily meeting and aligned on milestones.">
+                                <i class="fa-solid fa-users"></i> Meeting
+                            </button>
+                            <button class="suggestion-chip" data-text="📝 Documentation: Updated technical logs and timesheet entries.">
+                                <i class="fa-solid fa-file-signature"></i> Docs
+                            </button>
+                            <button class="suggestion-chip" data-text="🔍 Testing & QA: Ran tests and validated dashboard responsive layouts.">
+                                <i class="fa-solid fa-vial"></i> QA
+                            </button>
+                        </div>
                     </div>
                 `;
 
                 const textarea = card.querySelector('.slot-textarea');
-                textarea.addEventListener('blur', () => saveSlot(slot.row, textarea.value));
+                textarea.addEventListener('blur', () => {
+                    saveSlot(slot.row, textarea.value);
+                });
+                
                 textarea.addEventListener('input', () => {
                     const badge = document.getElementById(`status-${slot.row}`);
                     if (badge) {
                         badge.className = 'slot-status unsaved';
                         badge.innerHTML = '<i class="fa-solid fa-circle-dot"></i> Unsaved';
                     }
+                    
+                    // Mark timeline segment as unsaved/active
+                    const seg = document.querySelector(`.timeline-segment[data-row="${slot.row}"]`);
+                    if (seg) {
+                        seg.className = `timeline-segment work empty active`;
+                    }
+                });
+
+                // Hook up suggestion chips
+                const chips = card.querySelectorAll('.suggestion-chip');
+                chips.forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        const targetText = chip.getAttribute('data-text');
+                        const currentVal = textarea.value.trim();
+                        textarea.value = currentVal ? `${currentVal}\n${targetText}` : targetText;
+                        
+                        // Trigger input events
+                        textarea.dispatchEvent(new Event('input'));
+                        saveSlot(slot.row, textarea.value);
+                    });
                 });
             }
 
@@ -355,6 +449,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (badge) {
                 badge.className = 'slot-status saved';
                 badge.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Synced';
+            }
+
+            // Find slot in local currentSlots and update it
+            const matchedSlot = currentSlots.find(s => s.row === row);
+            if (matchedSlot) {
+                matchedSlot.activity = text;
+            }
+
+            // Update real-time visual progress ring
+            updateKPIRings(currentSlots, currentWeekNum);
+
+            // Update timeline segment class
+            const seg = document.querySelector(`.timeline-segment[data-row="${row}"]`);
+            if (seg) {
+                const isFilled = text && text.trim().length > 0;
+                seg.className = `timeline-segment work ${isFilled ? 'filled' : 'empty'}`;
+                
+                // Update tooltip text
+                const tooltipText = seg.querySelector('.tooltip span:last-child');
+                if (tooltipText) {
+                    tooltipText.textContent = isFilled ? 'Logged: ' + text.substring(0, 30) + '...' : 'Empty — Click to edit';
+                }
             }
         })
         .catch(() => {
@@ -393,9 +509,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Synced to daily log successfully!', 'success');
                 addActivity('Synced to Teams', `Week ${week_num}, Day ${day_num}`);
 
+                // Update Cloud Sync Ring to 100%
+                updateRing('sync', 100, 'Synced ✓');
                 const kpiSync = document.getElementById('kpi-sync');
                 if (kpiSync) {
-                    kpiSync.textContent = 'Synced ✓';
                     kpiSync.style.color = 'var(--success)';
                 }
             })
@@ -454,5 +571,319 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.style.animation = 'slideOutRight 0.3s ease forwards';
             setTimeout(() => toast.remove(), 300);
         }, 4000);
+    }
+
+    // ═══════════════════════════════════════
+    // VISUAL CIRCULAR GAUGE RENDERER
+    // ═══════════════════════════════════════
+    function updateKPIRings(slots, weekNum) {
+        let totalHours = 0;
+        let filledSlots = 0;
+        let workSlots = 0;
+
+        slots.forEach(s => {
+            if (s.type === 'Work') {
+                workSlots++;
+                totalHours += (s.duration || 0);
+                if (s.activity && s.activity.trim()) filledSlots++;
+            }
+        });
+
+        // 1. Hours Tracked ring: relative to standard 8-hour workday
+        const hoursPct = Math.min(Math.round((totalHours / 8) * 100), 100);
+        updateRing('hours', hoursPct, totalHours, 'h');
+
+        // 2. Blocks Logged ring: relative to total work slots
+        const slotsPct = workSlots > 0 ? Math.round((filledSlots / workSlots) * 100) : 0;
+        updateRing('slots', slotsPct, `${filledSlots}/${workSlots}`);
+
+        // 3. Active Week ring: relative to 8 internship weeks
+        const maxWeeks = 8;
+        const weekPct = Math.min(Math.round((weekNum / maxWeeks) * 100), 100);
+        updateRing('week', weekPct, `W${weekNum}`);
+
+        // 4. Cloud Integration ring: read status text
+        const kpiSync = document.getElementById('kpi-sync');
+        const syncText = kpiSync ? kpiSync.textContent.trim() : 'Not synced';
+        let syncPct = 0;
+        if (syncText.includes('Synced')) syncPct = 100;
+        else if (syncText.includes('Pending')) syncPct = 50;
+        updateRing('sync', syncPct, syncText);
+    }
+
+    function updateRing(key, percent, valText, suffix = '') {
+        const ring = document.getElementById(`kpi-${key}-ring`);
+        const pctText = document.getElementById(`kpi-${key}-pct`);
+        const valueEl = document.getElementById(`kpi-${key}`);
+        
+        if (valueEl) valueEl.textContent = valText + suffix;
+        if (pctText) pctText.textContent = `${percent}%`;
+        
+        if (ring) {
+            const radius = 22;
+            const circumference = 2 * Math.PI * radius; // 138.23
+            const offset = circumference - (percent / 100) * circumference;
+            ring.style.strokeDashoffset = offset;
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // DAY TIMELINE RENDERING
+    // ═══════════════════════════════════════
+    function renderDayTimeline(slots, arrivalTime) {
+        const timelineTrack = document.getElementById('timeline-track');
+        const timelineStats = document.getElementById('timeline-stats');
+        const timelineTicks = document.getElementById('timeline-ticks');
+        if (!timelineTrack) return;
+
+        timelineTrack.innerHTML = '';
+        if (timelineTicks) timelineTicks.innerHTML = '';
+
+        if (!slots || slots.length === 0) return;
+
+        // Find overall day boundaries
+        const firstSlot = slots[0];
+        const lastSlot = slots[slots.length - 1];
+        
+        if (timelineStats) {
+            timelineStats.textContent = `${firstSlot.start} — ${lastSlot.end} • Daily Spread`;
+        }
+
+        // Helper to convert time "HH:MM" to minutes
+        function timeToMin(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        const startMin = timeToMin(firstSlot.start);
+        const endMin = timeToMin(lastSlot.end);
+        const totalMin = endMin - startMin;
+
+        // Render ticks
+        if (timelineTicks) {
+            // Generate ticks for each hour
+            const startHour = Math.floor(startMin / 60);
+            const endHour = Math.ceil(endMin / 60);
+            
+            // Render relative ticks positioning them absolute
+            timelineTicks.style.position = 'relative';
+            timelineTicks.style.height = '20px';
+
+            for (let h = startHour; h <= endHour; h++) {
+                const tickMin = h * 60;
+                if (tickMin >= startMin && tickMin <= endMin) {
+                    const pct = ((tickMin - startMin) / totalMin) * 100;
+                    const tick = document.createElement('span');
+                    tick.className = 'timeline-tick';
+                    tick.style.position = 'absolute';
+                    tick.style.left = `${pct}%`;
+                    tick.style.transform = 'translateX(-50%)';
+                    
+                    // Format tick hour
+                    const displayHour = h % 12 === 0 ? 12 : h % 12;
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    tick.textContent = `${displayHour}${ampm}`;
+                    
+                    timelineTicks.appendChild(tick);
+                }
+            }
+        }
+
+        // Render segments
+        slots.forEach(s => {
+            const sMin = timeToMin(s.start);
+            const eMin = timeToMin(s.end);
+            const dMin = eMin - sMin;
+            const widthPct = (dMin / totalMin) * 100;
+
+            const segment = document.createElement('div');
+            const isLunch = s.type === 'Lunch Break';
+            const isFilled = s.activity && s.activity.trim().length > 0;
+            
+            segment.className = `timeline-segment ${isLunch ? 'lunch' : 'work'} ${isFilled ? 'filled' : 'empty'}`;
+            segment.style.width = `${widthPct}%`;
+            segment.setAttribute('data-row', s.row);
+
+            // Tooltip preview
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.innerHTML = `
+                <strong>${s.start} - ${s.end}</strong> (${s.duration}h)<br>
+                <span>${s.type}</span><br>
+                <span style="color: var(--text-muted); font-size: 0.65rem;">${isLunch ? 'Auto-Skipped' : (isFilled ? 'Logged: ' + s.activity.substring(0, 30) + '...' : 'Empty — Click to edit')}</span>
+            `;
+            segment.appendChild(tooltip);
+
+            // Click listener: focus card
+            if (!isLunch) {
+                segment.addEventListener('click', () => {
+                    const cardTextarea = document.querySelector(`.slot-textarea[data-row="${s.row}"]`);
+                    if (cardTextarea) {
+                        const card = cardTextarea.closest('.slot-card');
+                        if (card) {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            
+                            // Highlight animation outline
+                            card.style.outline = '3px solid var(--accent)';
+                            card.style.borderRadius = 'var(--radius-md)';
+                            cardTextarea.focus();
+                            
+                            setTimeout(() => {
+                                card.style.outline = '';
+                            }, 1500);
+                        }
+                    }
+                });
+            }
+
+            timelineTrack.appendChild(segment);
+        });
+
+        // Initialize/update playhead if selected date is today
+        updateTimelinePlayhead(startMin, totalMin);
+    }
+
+    function updateTimelinePlayhead(startMin, totalMin) {
+        const playhead = document.getElementById('timeline-playhead');
+        if (!playhead) return;
+
+        const cfgDate = document.getElementById('cfg-date');
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        if (cfgDate && cfgDate.value === todayStr) {
+            const now = new Date();
+            const currMin = now.getHours() * 60 + now.getMinutes();
+            const endMin = startMin + totalMin;
+
+            if (currMin >= startMin && currMin <= endMin) {
+                const pct = ((currMin - startMin) / totalMin) * 100;
+                playhead.style.left = `${pct}%`;
+                playhead.style.display = 'block';
+                return;
+            }
+        }
+        playhead.style.display = 'none';
+    }
+
+    // ═══════════════════════════════════════
+    // WEEK CALENDAR EXPLORER RENDERER
+    // ═══════════════════════════════════════
+    function loadWeeklyProgress(weekNum) {
+        if (!weekDaysGrid) return;
+        
+        timesheetWeekBadge.textContent = `Week ${weekNum} Progress`;
+        
+        // Render Loading Indicator
+        weekDaysGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--text-secondary);">
+                <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                Scanning timesheet Excel data...
+            </div>
+        `;
+        
+        fetch('/api/load-week', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                week_num: weekNum,
+                teams_sync_dir: cfgTeamsDir.value.trim()
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (timesheetEmpty) timesheetEmpty.classList.add('hidden');
+            if (timesheetLoaded) timesheetLoaded.classList.remove('hidden');
+
+            weekDaysGrid.innerHTML = '';
+            const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+            data.days.forEach(day => {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+
+                const initialized = day.initialized;
+                const pct = day.work_slots > 0 ? Math.round((day.filled_slots / day.work_slots) * 100) : 0;
+                
+                let statusBadge = '<span class="badge badge-danger">Not Started</span>';
+                if (initialized) {
+                    statusBadge = pct === 100 
+                        ? '<span class="badge badge-success">Fully Logged</span>'
+                        : `<span class="badge badge-warning">${day.filled_slots}/${day.work_slots} Logged</span>`;
+                }
+
+                const logPreview = day.log 
+                    ? day.log 
+                    : (initialized ? 'Draft details in timesheet...' : 'No work blocks loaded for this day.');
+
+                dayCard.innerHTML = `
+                    <div class="day-card-header">
+                        <div class="day-card-title">${dayNames[day.day_num - 1]}</div>
+                        ${statusBadge}
+                    </div>
+                    <div class="day-progress-bar">
+                        <div class="day-progress-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="day-progress-label">
+                        <span>Completion</span>
+                        <span>${pct}% (${day.hours.toFixed(1)}h)</span>
+                    </div>
+                    <div class="day-preview-log" title="${logPreview}">
+                        ${logPreview}
+                    </div>
+                    <div class="day-card-actions">
+                        <button class="btn btn-ghost btn-sm btn-block load-day-btn" data-day="${day.day_num}">
+                            <i class="fa-solid fa-folder-open"></i> Load Day Details
+                        </button>
+                    </div>
+                `;
+
+                // Wire up Load Day button
+                dayCard.querySelector('.load-day-btn').addEventListener('click', () => {
+                    cfgDay.value = day.day_num.toString();
+                    
+                    // Set cfgDate matching this week day
+                    const weekStartDate = getWeekStartDate(weekNum);
+                    if (weekStartDate) {
+                        const targetDate = new Date(weekStartDate);
+                        targetDate.setDate(targetDate.getDate() + (day.day_num - 1));
+                        
+                        const localISO = new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+                        cfgDate.value = localISO;
+                    }
+                    
+                    // Submit configForm to load the day
+                    configForm.dispatchEvent(new Event('submit'));
+                });
+
+                weekDaysGrid.appendChild(dayCard);
+            });
+        })
+        .catch(err => {
+            console.error('Week load error:', err);
+            weekDaysGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--error);">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                    <p>Failed to scan week progress log data. Make sure a valid sheet is selected.</p>
+                </div>
+            `;
+        });
+    }
+
+    // Helper to calculate start date of a week index
+    function getWeekStartDate(weekNum) {
+        const cfgDateVal = cfgDate.value;
+        const currentSelectedDate = new Date(cfgDateVal);
+        if (isNaN(currentSelectedDate.getTime())) return null;
+        
+        const dayOffset = currentSelectedDate.getDay() - 1; // days since monday (0-indexed)
+        const monday = new Date(currentSelectedDate);
+        monday.setDate(monday.getDate() - (dayOffset < 0 ? 4 : dayOffset)); // fallback for weekends
+        
+        const currentWeekVal = parseInt(cfgWeek.value) || 1;
+        const weekDiff = weekNum - currentWeekVal;
+        
+        const targetMonday = new Date(monday);
+        targetMonday.setDate(targetMonday.getDate() + (weekDiff * 7));
+        return targetMonday;
     }
 });

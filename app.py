@@ -356,6 +356,62 @@ def api_sync_day():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/load-week', methods=['POST'])
+@login_required
+def api_load_week():
+    import excel_manager
+    data = request.json or {}
+    username = session['username']
+    week_num = int(data.get('week_num', 1))
+    teams_sync_dir = data.get('teams_sync_dir')
+
+    filepath = get_user_filepath(username, teams_sync_dir)
+    days_data = []
+
+    for d in range(1, 6):
+        try:
+            log_val = excel_manager.get_existing_log(filepath, week_num, d)
+            wb, ws = excel_manager.get_timesheet_sheet(filepath)
+            start_row, end_row = excel_manager.find_day_row_range(ws, week_num, d)
+
+            total_hours = 0
+            filled_slots = 0
+            work_slots = 0
+
+            if start_row is not None:
+                for r in range(start_row, end_row + 1):
+                    cat = ws.cell(row=r, column=7).value
+                    dur = ws.cell(row=r, column=6).value
+                    act = ws.cell(row=r, column=8).value
+                    if cat == "Work":
+                        work_slots += 1
+                        total_hours += (dur or 0)
+                        if act and str(act).strip():
+                            filled_slots += 1
+            wb.close()
+
+            days_data.append({
+                "day_num": d,
+                "log": log_val or "",
+                "hours": total_hours,
+                "filled_slots": filled_slots,
+                "work_slots": work_slots,
+                "initialized": start_row is not None
+            })
+        except Exception as e:
+            days_data.append({
+                "day_num": d,
+                "log": "",
+                "hours": 0,
+                "filled_slots": 0,
+                "work_slots": 0,
+                "initialized": False,
+                "error": str(e)
+            })
+
+    return jsonify({"week_num": week_num, "days": days_data})
+
+
 # ───────────────────────── Admin APIs ─────────────────────────
 
 @app.route('/api/admin/config', methods=['GET'])
