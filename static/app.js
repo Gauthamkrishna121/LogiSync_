@@ -8,13 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const configForm = document.getElementById('config-form');
     const cfgUsername = document.getElementById('cfg-username');
-    const cfgTeamsDir = document.getElementById('cfg-teams-dir');
-    const cfgWeek = document.getElementById('cfg-week');
-    const cfgDay = document.getElementById('cfg-day');
     const cfgDate = document.getElementById('cfg-date');
     const cfgArrival = document.getElementById('cfg-arrival');
     const loadBtn = document.getElementById('load-btn');
-    const syncBtn = document.getElementById('sync-btn');
+    const summaryBtn = document.getElementById('summary-btn');
 
     const slotsContainer = document.getElementById('slots-container');
     const dashboardEmpty = document.getElementById('dashboard-empty');
@@ -31,8 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const activityLog = [];
 
     // Current app state cache
-    let currentWeekNum = 1;
-    let currentDayNum = 1;
     let currentSlots = [];
 
     // ═══════════════════════════════════════
@@ -124,12 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Close mobile sidebar
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('active');
-
-        // If transitioning to timesheet view, load the weekly history summary
-        if (viewName === 'timesheet') {
-            const week_num = parseInt(cfgWeek.value) || currentWeekNum || 1;
-            loadWeeklyProgress(week_num);
-        }
     }
 
     navItems.forEach(item => {
@@ -143,8 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gotoTimesheetBtn = document.getElementById('goto-timesheet-btn');
     if (gotoTimesheetBtn) gotoTimesheetBtn.addEventListener('click', () => switchView('config'));
 
-    const gotoConfigBtn2 = document.getElementById('goto-config-btn2');
-    if (gotoConfigBtn2) gotoConfigBtn2.addEventListener('click', () => switchView('config'));
+
 
     // ═══════════════════════════════════════
     // MOBILE SIDEBAR
@@ -192,42 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(config => {
             if (!config) return;
             if (config.default_username) cfgUsername.value = config.default_username;
-            if (config.teams_sync_dir) cfgTeamsDir.value = config.teams_sync_dir;
-            if (config.start_date) calculateWeekAndDay(config.start_date);
         })
         .catch(err => console.error('Config load error:', err));
-
-    // ═══════════════════════════════════════
-    // AUTO WEEK/DAY CALCULATION
-    // ═══════════════════════════════════════
-    cfgDate.addEventListener('change', () => {
-        fetch('/api/config')
-            .then(r => r.json())
-            .then(config => {
-                if (config.start_date) calculateWeekAndDay(config.start_date);
-            });
-    });
-
-    function calculateWeekAndDay(startDateStr) {
-        const start = new Date(startDateStr);
-        const current = new Date(cfgDate.value);
-        if (isNaN(start.getTime()) || isNaN(current.getTime())) return;
-
-        start.setHours(0, 0, 0, 0);
-        current.setHours(0, 0, 0, 0);
-
-        const diffTime = current.getTime() - start.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) { cfgWeek.value = '1'; cfgDay.value = '1'; return; }
-
-        const week = Math.floor(diffDays / 7) + 1;
-        let day = current.getDay();
-        if (day === 0 || day === 6) day = 5;
-
-        cfgWeek.value = week.toString();
-        cfgDay.value = day.toString();
-    }
 
     // ═══════════════════════════════════════
     // LOAD TIMESHEET
@@ -236,9 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
 
         const username = cfgUsername.value.trim();
-        const teams_sync_dir = cfgTeamsDir.value.trim();
-        const week_num = parseInt(cfgWeek.value);
-        const day_num = parseInt(cfgDay.value);
         const date_val = cfgDate.value;
         const arrival_time = cfgArrival.value;
 
@@ -250,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/load-timesheet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, teams_sync_dir, week_num, day_num, date_val, arrival_time })
+            body: JSON.stringify({ username, date_val, arrival_time })
         })
         .then(res => {
             if (!res.ok) throw new Error('Failed to load timesheet.');
@@ -261,18 +212,16 @@ document.addEventListener('DOMContentLoaded', () => {
             loadBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Load Timesheet';
 
             // Save state cache
-            currentWeekNum = week_num;
-            currentDayNum = day_num;
             currentSlots = data.slots;
 
             // Update KPIs
-            updateKPIs(data.slots, week_num, day_num);
-            updateKPIRings(data.slots, week_num);
+            updateKPIs(data.slots);
+            updateKPIRings(data.slots);
 
             // Switch to dashboard and show loaded content
             dashboardEmpty.classList.add('hidden');
             dashboardLoaded.classList.remove('hidden');
-            timesheetDateBadge.textContent = `Week ${week_num}, Day ${day_num} • ${date_val}`;
+            timesheetDateBadge.textContent = date_val;
 
             // Render visual Day Timeline
             renderDayTimeline(data.slots, arrival_time);
@@ -284,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSlotCards(data.slots);
             switchView('dashboard');
             showToast('Timesheet loaded successfully!', 'success');
-            addActivity('Loaded timesheet', `Week ${week_num}, Day ${day_num}`);
+            addActivity('Loaded timesheet', date_val);
         })
         .catch(err => {
             loadBtn.disabled = false;
@@ -296,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════
     // KPI UPDATE
     // ═══════════════════════════════════════
-    function updateKPIs(slots, weekNum, dayNum) {
+    function updateKPIs(slots) {
         // Hours today
         let totalHours = 0;
         let filledSlots = 0;
@@ -312,18 +261,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const kpiHours = document.getElementById('kpi-hours');
         const kpiSlots = document.getElementById('kpi-slots');
-        const kpiWeek = document.getElementById('kpi-week');
+        const kpiDate = document.getElementById('kpi-date');
         const kpiDayLabel = document.getElementById('kpi-day-label');
-        const kpiSync = document.getElementById('kpi-sync');
+        const kpiSummary = document.getElementById('kpi-summary');
 
         if (kpiHours) animateValue(kpiHours, totalHours, 'h');
         if (kpiSlots) kpiSlots.textContent = `${filledSlots} / ${workSlots}`;
-        if (kpiWeek) kpiWeek.textContent = `W${weekNum}`;
+        if (kpiDate) kpiDate.textContent = cfgDate.value;
         if (kpiDayLabel) {
-            const days = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-            kpiDayLabel.textContent = `Day ${dayNum} — ${days[dayNum] || ''}`;
+            const current = new Date(cfgDate.value);
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            kpiDayLabel.textContent = days[current.getDay()] || '';
         }
-        if (kpiSync) { kpiSync.textContent = 'Pending'; kpiSync.style.color = 'var(--warning)'; }
+        if (kpiSummary) { 
+            kpiSummary.textContent = 'Not sent'; 
+            kpiSummary.style.color = 'var(--warning)'; 
+            document.getElementById('summary-banner').style.display = 'flex';
+        }
     }
 
     function animateValue(el, target, suffix = '') {
@@ -460,13 +414,13 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/save-slot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, teams_sync_dir: cfgTeamsDir.value.trim(), row, text })
+            body: JSON.stringify({ username, date_val: cfgDate.value, row, text })
         })
         .then(res => {
             if (!res.ok) throw new Error();
             if (badge) {
                 badge.className = 'slot-status saved';
-                badge.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Synced';
+                badge.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Saved';
             }
 
             // Find slot in local currentSlots and update it
@@ -476,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Update real-time visual progress ring
-            updateKPIRings(currentSlots, currentWeekNum);
+            updateKPIRings(currentSlots);
 
             // Update timeline segment class
             const seg = document.querySelector(`.timeline-segment[data-row="${row}"]`);
@@ -501,42 +455,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════
-    // SYNC TO TEAMS
+    // SEND DAILY SUMMARY
     // ═══════════════════════════════════════
-    if (syncBtn) {
-        syncBtn.addEventListener('click', () => {
+    if (summaryBtn) {
+        summaryBtn.addEventListener('click', () => {
+            switchView('ai-summary');
+        });
+    }
+
+    // ═══════════════════════════════════════
+    // AI SUMMARY PAGE LOGIC
+    // ═══════════════════════════════════════
+    const pageSummaryBtn = document.getElementById('page-summary-btn');
+    const pageSummarySend = document.getElementById('page-summary-send');
+    const aiSummaryEditorContainer = document.getElementById('ai-summary-editor-container');
+    const pageSummaryEditor = document.getElementById('page-summary-text-editor');
+
+    if (pageSummaryBtn) {
+        pageSummaryBtn.addEventListener('click', () => {
             const username = cfgUsername.value.trim();
-            const week_num = parseInt(cfgWeek.value);
-            const day_num = parseInt(cfgDay.value);
+            const date_val = cfgDate.value;
 
-            syncBtn.disabled = true;
-            syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+            pageSummaryBtn.disabled = true;
+            pageSummaryBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
 
-            fetch('/api/sync-day', {
+            fetch('/api/generate-summary', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, teams_sync_dir: cfgTeamsDir.value.trim(), week_num, day_num })
+                body: JSON.stringify({ username, date_val })
             })
             .then(res => {
-                if (!res.ok) throw new Error('Sync failed.');
+                if (!res.ok) throw new Error('Failed to generate summary.');
                 return res.json();
             })
-            .then(() => {
-                syncBtn.disabled = false;
-                syncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Sync & Publish';
-                showToast('Synced to daily log successfully!', 'success');
-                addActivity('Synced to Teams', `Week ${week_num}, Day ${day_num}`);
-
-                // Update Cloud Sync Ring to 100%
-                updateRing('sync', 100, 'Synced ✓');
-                const kpiSync = document.getElementById('kpi-sync');
-                if (kpiSync) {
-                    kpiSync.style.color = 'var(--success)';
+            .then(data => {
+                pageSummaryBtn.disabled = false;
+                pageSummaryBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Summary';
+                
+                if (aiSummaryEditorContainer && pageSummaryEditor) {
+                    pageSummaryEditor.value = data.summary_text || '';
+                    aiSummaryEditorContainer.classList.remove('hidden');
                 }
             })
             .catch(err => {
-                syncBtn.disabled = false;
-                syncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Sync & Publish';
+                pageSummaryBtn.disabled = false;
+                pageSummaryBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate AI Summary';
+                showToast(err.message, 'error');
+            });
+        });
+    }
+
+    if (pageSummarySend) {
+        pageSummarySend.addEventListener('click', () => {
+            const username = cfgUsername.value.trim();
+            const date_val = cfgDate.value;
+            const summary_text = pageSummaryEditor ? pageSummaryEditor.value : '';
+
+            pageSummarySend.disabled = true;
+            pageSummarySend.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+            fetch('/api/send-summary', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, date_val, summary_text })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed to send summary.') });
+                return res.json();
+            })
+            .then(() => {
+                pageSummarySend.disabled = false;
+                pageSummarySend.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Final Summary';
+                
+                if (aiSummaryEditorContainer) {
+                    aiSummaryEditorContainer.classList.add('hidden');
+                }
+                if (pageSummaryEditor) {
+                    pageSummaryEditor.value = '';
+                }
+
+                showToast('Daily summary sent to mentor successfully!', 'success');
+                addActivity('Sent summary', date_val);
+
+                // Update Mentor Summary Ring to 100%
+                updateRing('summary', 100, 'Sent ✓');
+                const kpiSummary = document.getElementById('kpi-summary');
+                if (kpiSummary) {
+                    kpiSummary.style.color = 'var(--success)';
+                }
+            })
+            .catch(err => {
+                pageSummarySend.disabled = false;
+                pageSummarySend.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Final Summary';
                 showToast(err.message, 'error');
             });
         });
@@ -594,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════
     // VISUAL CIRCULAR GAUGE RENDERER
     // ═══════════════════════════════════════
-    function updateKPIRings(slots, weekNum) {
+    function updateKPIRings(slots) {
         let totalHours = 0;
         let filledSlots = 0;
         let workSlots = 0;
@@ -615,18 +625,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const slotsPct = workSlots > 0 ? Math.round((filledSlots / workSlots) * 100) : 0;
         updateRing('slots', slotsPct, `${filledSlots}/${workSlots}`);
 
-        // 3. Active Week ring: relative to 8 internship weeks
-        const maxWeeks = 8;
-        const weekPct = Math.min(Math.round((weekNum / maxWeeks) * 100), 100);
-        updateRing('week', weekPct, `W${weekNum}`);
+        // 3. Active Date ring
+        updateRing('date', 100, cfgDate.value);
 
-        // 4. Cloud Integration ring: read status text
-        const kpiSync = document.getElementById('kpi-sync');
-        const syncText = kpiSync ? kpiSync.textContent.trim() : 'Not synced';
-        let syncPct = 0;
-        if (syncText.includes('Synced')) syncPct = 100;
-        else if (syncText.includes('Pending')) syncPct = 50;
-        updateRing('sync', syncPct, syncText);
+        // 4. Mentor Summary ring
+        const kpiSummary = document.getElementById('kpi-summary');
+        const summaryText = kpiSummary ? kpiSummary.textContent.trim() : 'Not sent';
+        let summaryPct = 0;
+        if (summaryText.includes('Sent')) summaryPct = 100;
+        updateRing('summary', summaryPct, summaryText);
     }
 
     function updateRing(key, percent, valText, suffix = '') {
@@ -783,125 +790,4 @@ document.addEventListener('DOMContentLoaded', () => {
         playhead.style.display = 'none';
     }
 
-    // ═══════════════════════════════════════
-    // WEEK CALENDAR EXPLORER RENDERER
-    // ═══════════════════════════════════════
-    function loadWeeklyProgress(weekNum) {
-        if (!weekDaysGrid) return;
-        
-        timesheetWeekBadge.textContent = `Week ${weekNum} Progress`;
-        
-        // Render Loading Indicator
-        weekDaysGrid.innerHTML = `
-            <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--text-secondary);">
-                <div class="spinner" style="margin: 0 auto 1rem;"></div>
-                Scanning timesheet Excel data...
-            </div>
-        `;
-        
-        fetch('/api/load-week', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                week_num: weekNum,
-                teams_sync_dir: cfgTeamsDir.value.trim()
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (timesheetEmpty) timesheetEmpty.classList.add('hidden');
-            if (timesheetLoaded) timesheetLoaded.classList.remove('hidden');
-
-            weekDaysGrid.innerHTML = '';
-            const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-            data.days.forEach(day => {
-                const dayCard = document.createElement('div');
-                dayCard.className = 'day-card';
-
-                const initialized = day.initialized;
-                const pct = day.work_slots > 0 ? Math.round((day.filled_slots / day.work_slots) * 100) : 0;
-                
-                let statusBadge = '<span class="badge badge-danger">Not Started</span>';
-                if (initialized) {
-                    statusBadge = pct === 100 
-                        ? '<span class="badge badge-success">Fully Logged</span>'
-                        : `<span class="badge badge-warning">${day.filled_slots}/${day.work_slots} Logged</span>`;
-                }
-
-                const logPreview = day.log 
-                    ? day.log 
-                    : (initialized ? 'Draft details in timesheet...' : 'No work blocks loaded for this day.');
-
-                dayCard.innerHTML = `
-                    <div class="day-card-header">
-                        <div class="day-card-title">${dayNames[day.day_num - 1]}</div>
-                        ${statusBadge}
-                    </div>
-                    <div class="day-progress-bar">
-                        <div class="day-progress-fill" style="width: ${pct}%"></div>
-                    </div>
-                    <div class="day-progress-label">
-                        <span>Completion</span>
-                        <span>${pct}% (${day.hours.toFixed(1)}h)</span>
-                    </div>
-                    <div class="day-preview-log" title="${logPreview}">
-                        ${logPreview}
-                    </div>
-                    <div class="day-card-actions">
-                        <button class="btn btn-ghost btn-sm btn-block load-day-btn" data-day="${day.day_num}">
-                            <i class="fa-solid fa-folder-open"></i> Load Day Details
-                        </button>
-                    </div>
-                `;
-
-                // Wire up Load Day button
-                dayCard.querySelector('.load-day-btn').addEventListener('click', () => {
-                    cfgDay.value = day.day_num.toString();
-                    
-                    // Set cfgDate matching this week day
-                    const weekStartDate = getWeekStartDate(weekNum);
-                    if (weekStartDate) {
-                        const targetDate = new Date(weekStartDate);
-                        targetDate.setDate(targetDate.getDate() + (day.day_num - 1));
-                        
-                        const localISO = new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
-                        cfgDate.value = localISO;
-                    }
-                    
-                    // Submit configForm to load the day
-                    configForm.dispatchEvent(new Event('submit'));
-                });
-
-                weekDaysGrid.appendChild(dayCard);
-            });
-        })
-        .catch(err => {
-            console.error('Week load error:', err);
-            weekDaysGrid.innerHTML = `
-                <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--error);">
-                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
-                    <p>Failed to scan week progress log data. Make sure a valid sheet is selected.</p>
-                </div>
-            `;
-        });
-    }
-
-    // Helper to calculate start date of a week index
-    function getWeekStartDate(weekNum) {
-        const cfgDateVal = cfgDate.value;
-        const currentSelectedDate = new Date(cfgDateVal);
-        if (isNaN(currentSelectedDate.getTime())) return null;
-        
-        const dayOffset = currentSelectedDate.getDay() - 1; // days since monday (0-indexed)
-        const monday = new Date(currentSelectedDate);
-        monday.setDate(monday.getDate() - (dayOffset < 0 ? 4 : dayOffset)); // fallback for weekends
-        
-        const currentWeekVal = parseInt(cfgWeek.value) || 1;
-        const weekDiff = weekNum - currentWeekVal;
-        
-        const targetMonday = new Date(monday);
-        targetMonday.setDate(targetMonday.getDate() + (weekDiff * 7));
-        return targetMonday;
-    }
 });

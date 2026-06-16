@@ -126,13 +126,7 @@
                     </h3>
                     <div class="card" style="max-width: 540px;">
                         <form id="global-config-form" class="config-panel">
-                            <div class="form-group">
-                                <label class="form-label" for="adm-teams-dir">
-                                    <i class="fa-solid fa-folder-open"></i> Teams Sync Root Folder
-                                </label>
-                                <input type="text" id="adm-teams-dir" class="form-input" placeholder="e.g. users or C:/TeamsSync" required>
-                                <span class="form-hint">Root directory where student folders are stored.</span>
-                            </div>
+
                             <div class="form-group">
                                 <label class="form-label" for="adm-start-date">
                                     <i class="fa-solid fa-calendar-day"></i> Internship Start Date
@@ -166,6 +160,12 @@
                                     <i class="fa-solid fa-id-card"></i> Full Name
                                 </label>
                                 <input type="text" id="stu-fullname" class="form-input" placeholder="e.g. Gautham Krishna" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="stu-mentor-email">
+                                    <i class="fa-solid fa-envelope"></i> Mentor Email
+                                </label>
+                                <input type="email" id="stu-mentor-email" class="form-input" placeholder="e.g. mentor@example.com">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="stu-password">

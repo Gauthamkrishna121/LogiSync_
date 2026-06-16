@@ -18,7 +18,7 @@ def get_db():
 
 
 def init_db():
-    """Initialize the database schema and migrate legacy data."""
+    """Initialize the database schema."""
     conn = get_db()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -26,6 +26,7 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             full_name TEXT NOT NULL,
             email TEXT DEFAULT '',
+            mentor_email TEXT DEFAULT '',
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'student',
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -38,45 +39,14 @@ def init_db():
     count = cursor.fetchone()[0]
 
     if count == 0:
-        # Try to migrate from legacy JSON file
-        if os.path.exists(LEGACY_USERS_FILE):
-            _migrate_from_json(conn)
-        else:
-            # Seed default admin account
-            conn.execute(
-                "INSERT INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-                ("admin", "Team Leader", "", generate_password_hash("AdminPassword123!"), "admin")
-            )
-            conn.commit()
+        # Seed default admin account
+        conn.execute(
+            "INSERT INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+            ("admin", "Team Leader", "", generate_password_hash("AdminPassword123!"), "admin")
+        )
+        conn.commit()
 
     conn.close()
-
-
-def _migrate_from_json(conn):
-    """Migrate users from legacy users.json to SQLite."""
-    try:
-        with open(LEGACY_USERS_FILE, 'r') as f:
-            legacy_users = json.load(f)
-
-        for username, info in legacy_users.items():
-            try:
-                conn.execute(
-                    "INSERT OR IGNORE INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-                    (
-                        info.get("username", username),
-                        info.get("full_name", username),
-                        info.get("email", ""),
-                        info.get("password_hash", generate_password_hash("changeme")),
-                        info.get("role", "student")
-                    )
-                )
-            except Exception:
-                continue
-
-        conn.commit()
-        print(f"[user_manager] Migrated {len(legacy_users)} users from {LEGACY_USERS_FILE} to {DB_FILE}")
-    except Exception as e:
-        print(f"[user_manager] Migration warning: {e}")
 
 
 def _row_to_dict(row):
@@ -98,7 +68,7 @@ def authenticate_user(username, password):
     return None
 
 
-def create_user(username, full_name, password, role="student", email=""):
+def create_user(username, full_name, password, role="student", email="", mentor_email=""):
     """Create a new user account."""
     username_clean = "".join(c for c in username if c.isalnum() or c in ('_', '-')).strip().lower()
 
@@ -127,8 +97,8 @@ def create_user(username, full_name, password, role="student", email=""):
             raise ValueError(f"Email '{email}' is already registered.")
 
     conn.execute(
-        "INSERT INTO users (username, full_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-        (username_clean, full_name.strip(), email.strip().lower() if email else "", generate_password_hash(password), role)
+        "INSERT INTO users (username, full_name, email, mentor_email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?)",
+        (username_clean, full_name.strip(), email.strip().lower() if email else "", mentor_email.strip().lower() if mentor_email else "", generate_password_hash(password), role)
     )
     conn.commit()
 
@@ -155,7 +125,7 @@ def delete_user(username):
 def list_students():
     """List all users with role 'student'."""
     conn = get_db()
-    cursor = conn.execute("SELECT username, full_name, email, role, created_at FROM users WHERE role = 'student' ORDER BY created_at DESC")
+    cursor = conn.execute("SELECT username, full_name, email, mentor_email, role, created_at FROM users WHERE role = 'student' ORDER BY created_at DESC")
     students = [_row_to_dict(row) for row in cursor.fetchall()]
     conn.close()
     return students

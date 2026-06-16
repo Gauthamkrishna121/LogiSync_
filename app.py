@@ -2,8 +2,19 @@ import os
 import json
 import uuid
 import re
+import datetime
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
+
+import user_manager
+import excel_manager
+import ai_service
+import mail_service
+
+# Track who has sent summary today: { "username_YYYY-MM-DD": True }
+sent_summaries = {}
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -44,14 +55,12 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 
-def get_user_filepath(username, teams_sync_dir=None):
-    config = get_config()
+def get_user_filepath(username):
     username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
     if not username_clean:
         username_clean = "Default_User"
 
-    base_dir = teams_sync_dir or config.get("teams_sync_dir", DEFAULT_USERS_DIR)
-
+    base_dir = DEFAULT_USERS_DIR
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(base_dir)
 
@@ -240,8 +249,7 @@ def api_get_config():
     cfg = get_config()
     return jsonify({
         "start_date": cfg.get("start_date", "2026-06-01"),
-        "default_username": session.get('username', ''),
-        "teams_sync_dir": cfg.get("teams_sync_dir", "")
+        "default_username": session.get('username', '')
     })
 
 
@@ -254,8 +262,6 @@ def api_save_config():
         update_fields['start_date'] = data['start_date']
     if data.get('default_username'):
         update_fields['default_username'] = data['default_username']
-    if data.get('teams_sync_dir'):
-        update_fields['teams_sync_dir'] = data['teams_sync_dir']
 
     if update_fields:
         save_config(update_fields)
@@ -271,22 +277,13 @@ def api_load_timesheet():
     import excel_manager
     data = request.json or {}
     username = session['username']
-    week_num = int(data.get('week_num', 1))
-    day_num = int(data.get('day_num', 1))
     date_val = data.get('date_val')
     arrival_time = data.get('arrival_time', '09:00')
 
     if not date_val:
         return jsonify({"error": "Date value is required"}), 400
 
-    teams_sync_dir = data.get('teams_sync_dir')
-    if teams_sync_dir:
-        save_config({
-            'teams_sync_dir': teams_sync_dir,
-            'default_username': username
-        })
-
-    filepath = get_user_filepath(username, teams_sync_dir)
+    filepath = get_user_filepath(username)
 
     try:
         parts = date_val.split('-')
@@ -295,7 +292,7 @@ def api_load_timesheet():
         excel_date_str = date_val
 
     try:
-        slots = excel_manager.get_or_create_day_slots(filepath, week_num, day_num, excel_date_str, arrival_time)
+        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, arrival_time)
         return jsonify({
             "filepath": filepath,
             "slots": slots
@@ -328,88 +325,77 @@ def api_save_slot():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/sync-day', methods=['POST'])
+@app.route('/api/generate-summary', methods=['POST'])
 @login_required
-def api_sync_day():
-    import excel_manager
+def api_generate_summary():
     data = request.json or {}
-    username = data.get('username')
-    week_num = int(data.get('week_num'))
-    day_num = int(data.get('day_num'))
-    teams_sync_dir = data.get('teams_sync_dir')
-
-    if not username or not week_num or not day_num:
-        return jsonify({"error": "Missing parameters"}), 400
-
-    if teams_sync_dir:
-        save_config({
-            'teams_sync_dir': teams_sync_dir,
-            'default_username': username
-        })
-
-    filepath = get_user_filepath(username, teams_sync_dir)
-
+    username = session['username']
+    date_val = data.get('date_val')
+    
+    if not date_val:
+        return jsonify({"error": "Date value is required"}), 400
+        
+    user = user_manager.get_user_by_username(username)
+    filepath = get_user_filepath(username)
+    
     try:
-        excel_manager.sync_timesheet_to_daily_log(filepath, week_num, day_num)
-        return jsonify({"status": "success"})
+        parts = date_val.split('-')
+        excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except Exception:
+        excel_date_str = date_val
+        
+    try:
+        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
+        activities = [s['activity'] for s in slots if s['type'] == 'Work' and s.get('activity')]
+        
+        summary_text = ai_service.generate_daily_summary(user['full_name'], date_val, activities)
+        return jsonify({"summary_text": summary_text})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/load-week', methods=['POST'])
+@app.route('/api/send-summary', methods=['POST'])
 @login_required
-def api_load_week():
-    import excel_manager
+def api_send_summary():
     data = request.json or {}
     username = session['username']
-    week_num = int(data.get('week_num', 1))
-    teams_sync_dir = data.get('teams_sync_dir')
-
-    filepath = get_user_filepath(username, teams_sync_dir)
-    days_data = []
-
-    for d in range(1, 6):
-        try:
-            log_val = excel_manager.get_existing_log(filepath, week_num, d)
-            wb, ws = excel_manager.get_timesheet_sheet(filepath)
-            start_row, end_row = excel_manager.find_day_row_range(ws, week_num, d)
-
-            total_hours = 0
-            filled_slots = 0
-            work_slots = 0
-
-            if start_row is not None:
-                for r in range(start_row, end_row + 1):
-                    cat = ws.cell(row=r, column=7).value
-                    dur = ws.cell(row=r, column=6).value
-                    act = ws.cell(row=r, column=8).value
-                    if cat == "Work":
-                        work_slots += 1
-                        total_hours += (dur or 0)
-                        if act and str(act).strip():
-                            filled_slots += 1
-            wb.close()
-
-            days_data.append({
-                "day_num": d,
-                "log": log_val or "",
-                "hours": total_hours,
-                "filled_slots": filled_slots,
-                "work_slots": work_slots,
-                "initialized": start_row is not None
-            })
-        except Exception as e:
-            days_data.append({
-                "day_num": d,
-                "log": "",
-                "hours": 0,
-                "filled_slots": 0,
-                "work_slots": 0,
-                "initialized": False,
-                "error": str(e)
-            })
-
-    return jsonify({"week_num": week_num, "days": days_data})
+    date_val = data.get('date_val')
+    custom_summary = data.get('summary_text')
+    
+    if not date_val:
+        return jsonify({"error": "Date value is required"}), 400
+        
+    user = user_manager.get_user_by_username(username)
+    mentor_email = user.get('mentor_email')
+    
+    if not mentor_email:
+        return jsonify({"error": "Mentor email is not configured. Please ask your admin to set it up."}), 400
+        
+    filepath = get_user_filepath(username)
+    
+    try:
+        parts = date_val.split('-')
+        excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except Exception:
+        excel_date_str = date_val
+        
+    try:
+        if custom_summary:
+            summary_text = custom_summary
+        else:
+            slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
+            activities = [s['activity'] for s in slots if s['type'] == 'Work' and s.get('activity')]
+            summary_text = ai_service.generate_daily_summary(user['full_name'], date_val, activities)
+            
+        if mail_service.send_summary_email(mentor_email, user['full_name'], date_val, summary_text):
+            track_key = f"{username}_{date_val}"
+            global sent_summaries
+            sent_summaries[track_key] = True
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"error": "Failed to send email. Check server logs."}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ───────────────────────── Admin APIs ─────────────────────────
@@ -419,8 +405,7 @@ def api_load_week():
 def api_admin_get_config():
     cfg = get_config()
     return jsonify({
-        "start_date": cfg.get("start_date", "2026-06-01"),
-        "teams_sync_dir": cfg.get("teams_sync_dir", DEFAULT_USERS_DIR)
+        "start_date": cfg.get("start_date", "2026-06-01")
     })
 
 
@@ -429,14 +414,12 @@ def api_admin_get_config():
 def api_admin_save_config():
     data = request.json or {}
     start_date = data.get("start_date")
-    teams_sync_dir = data.get("teams_sync_dir")
 
-    if not start_date or not teams_sync_dir:
-        return jsonify({"error": "start_date and teams_sync_dir are required."}), 400
+    if not start_date:
+        return jsonify({"error": "start_date is required."}), 400
 
     cfg = get_config()
     cfg["start_date"] = start_date
-    cfg["teams_sync_dir"] = teams_sync_dir
 
     if save_config(cfg):
         return jsonify({"status": "success", "config": cfg})
@@ -448,15 +431,14 @@ def api_admin_save_config():
 def api_admin_students():
     import user_manager
     students = user_manager.list_students()
-    cfg = get_config()
-    base_dir = cfg.get("teams_sync_dir", DEFAULT_USERS_DIR)
+    base_dir = DEFAULT_USERS_DIR
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(base_dir)
 
     for s in students:
         user_dir = os.path.join(base_dir, s['username'])
         s['folder_exists'] = os.path.isdir(user_dir)
-        excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
+        excel_path = os.path.join(user_dir, "Internship_Log.xlsx")
         s['excel_exists'] = os.path.isfile(excel_path)
 
     return jsonify(students)
@@ -470,23 +452,23 @@ def api_admin_create_student():
     username = data.get('username')
     full_name = data.get('full_name')
     password = data.get('password')
+    mentor_email = data.get('mentor_email', '')
     auto_create_folder = data.get('auto_create_folder', False)
 
     if not username or not full_name or not password:
         return jsonify({"error": "Username, full name, and password are required."}), 400
 
     try:
-        student = user_manager.create_user(username, full_name, password, role="student")
+        student = user_manager.create_user(username, full_name, password, role="student", email="", mentor_email=mentor_email)
 
         if auto_create_folder:
-            cfg = get_config()
-            base_dir = cfg.get("teams_sync_dir", DEFAULT_USERS_DIR)
+            base_dir = DEFAULT_USERS_DIR
             if not os.path.isabs(base_dir):
                 base_dir = os.path.abspath(base_dir)
             user_dir = os.path.join(base_dir, student['username'])
             os.makedirs(user_dir, exist_ok=True)
 
-            excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
+            excel_path = os.path.join(user_dir, "Internship_Log.xlsx")
             if not os.path.exists(excel_path):
                 import excel_manager
                 wb, ws = excel_manager.get_timesheet_sheet(excel_path)
@@ -526,14 +508,13 @@ def api_admin_create_folder():
     if not username:
         return jsonify({"error": "Username is required."}), 400
 
-    cfg = get_config()
-    base_dir = cfg.get("teams_sync_dir", DEFAULT_USERS_DIR)
+    base_dir = DEFAULT_USERS_DIR
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(base_dir)
     user_dir = os.path.join(base_dir, username)
     os.makedirs(user_dir, exist_ok=True)
 
-    excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
+    excel_path = os.path.join(user_dir, "Internship_Log.xlsx")
     if not os.path.exists(excel_path):
         import excel_manager
         try:
@@ -549,5 +530,42 @@ def api_admin_create_folder():
 if __name__ == '__main__':
     import user_manager
     user_manager.load_users()
+
+    def send_daily_summaries():
+        print("Running automated daily summary job...")
+        today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+        students = user_manager.list_students()
+        for student in students:
+            username = student['username']
+            mentor_email = student.get('mentor_email')
+            
+            track_key = f"{username}_{today_str}"
+            if sent_summaries.get(track_key):
+                continue
+                
+            if not mentor_email:
+                continue
+                
+            filepath = get_user_filepath(username)
+            if not os.path.exists(filepath):
+                continue
+                
+            try:
+                excel_date_str = f"{today_str[8:10]}/{today_str[5:7]}/{today_str[0:4]}"
+                slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
+                activities = [s['activity'] for s in slots if s['type'] == 'Work' and s.get('activity')]
+                
+                summary_text = ai_service.generate_daily_summary(student['full_name'], today_str, activities)
+                
+                if mail_service.send_summary_email(mentor_email, student['full_name'], today_str, summary_text):
+                    sent_summaries[track_key] = True
+                    print(f"Automated summary sent for {username}")
+            except Exception as e:
+                print(f"Failed to auto-send for {username}: {e}")
+
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(func=send_daily_summaries, trigger="cron", hour=18, minute=30)
+    scheduler.start()
+    atexit.register(lambda: scheduler.shutdown())
 
     app.run(host='127.0.0.1', port=5000, debug=True)
