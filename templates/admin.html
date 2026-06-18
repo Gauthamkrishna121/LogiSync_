@@ -32,6 +32,10 @@
                     <i class="fa-solid fa-users"></i>
                     <span>Students</span>
                 </button>
+                <button class="nav-item" data-view="mentors" id="nav-mentors">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span>Mentors</span>
+                </button>
                 <button class="nav-item" data-view="settings" id="nav-settings">
                     <i class="fa-solid fa-gears"></i>
                     <span>Settings</span>
@@ -103,6 +107,7 @@
                                         <th>Sync Path</th>
                                         <th>Folder</th>
                                         <th>Excel</th>
+                                        <th>Assigned Mentor</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -163,9 +168,12 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="stu-mentor-email">
-                                    <i class="fa-solid fa-envelope"></i> Mentor Email
+                                    <i class="fa-solid fa-chalkboard-user"></i> Assigned Mentor
                                 </label>
-                                <input type="email" id="stu-mentor-email" class="form-input" placeholder="e.g. mentor@example.com">
+                                <select id="stu-mentor-email" class="form-select">
+                                    <option value="">No Mentor Assigned</option>
+                                    <!-- Rendered dynamically -->
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="stu-password">
@@ -181,6 +189,67 @@
                                 <i class="fa-solid fa-user-check"></i> Register Intern
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                <!-- ── VIEW: Mentors Management ── -->
+                <div id="view-mentors" class="view-panel hidden">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                        <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-chalkboard-user" style="color: var(--accent);"></i> Mentors Configuration
+                        </h3>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
+                        <!-- Left: Add Mentor Form -->
+                        <div class="card">
+                            <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.45rem;">
+                                <i class="fa-solid fa-user-plus" style="color: var(--accent);"></i> Add Mentor
+                            </h4>
+                            <form id="add-mentor-form" class="config-panel">
+                                <div class="form-group">
+                                    <label class="form-label" for="men-name">
+                                        <i class="fa-solid fa-id-card"></i> Mentor Name
+                                    </label>
+                                    <input type="text" id="men-name" class="form-input" placeholder="e.g. Jane Doe" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="men-email">
+                                        <i class="fa-solid fa-envelope"></i> Mentor Email
+                                    </label>
+                                    <input type="email" id="men-email" class="form-input" placeholder="e.g. jane@example.com" required>
+                                </div>
+                                <button type="submit" id="add-mentor-btn" class="btn btn-primary btn-block btn-lg" style="margin-top: 0.5rem;">
+                                    <i class="fa-solid fa-user-check"></i> Save Mentor
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- Right: Mentors List -->
+                        <div class="card">
+                            <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.45rem;">
+                                <i class="fa-solid fa-list" style="color: var(--accent);"></i> Registered Mentors
+                            </h4>
+                            <div class="data-table-container">
+                                <table class="data-table" id="mentors-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Mentor Name</th>
+                                            <th>Email</th>
+                                            <th>Assigned Students</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mentors-table-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                                Loading mentors database...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
