@@ -105,6 +105,17 @@ def admin_required(f):
     return decorated_function
 
 
+def mentor_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session or session.get('role') != 'mentor':
+            if request.is_json or request.path.startswith('/api/'):
+                return jsonify({"error": "Mentor access required."}), 403
+            return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # ───────────────────────── Views ─────────────────────────
 
 @app.route('/')
@@ -112,6 +123,8 @@ def admin_required(f):
 def index():
     if session.get('role') == 'admin':
         return redirect(url_for('admin_page'))
+    if session.get('role') == 'mentor':
+        return redirect(url_for('mentor_page'))
     return render_template('index.html')
 
 
@@ -120,6 +133,8 @@ def login_page():
     if 'username' in session:
         if session.get('role') == 'admin':
             return redirect(url_for('admin_page'))
+        if session.get('role') == 'mentor':
+            return redirect(url_for('mentor_page'))
         return redirect(url_for('index'))
     return render_template('login.html')
 
@@ -127,6 +142,10 @@ def login_page():
 @app.route('/register')
 def register_page():
     if 'username' in session:
+        if session.get('role') == 'admin':
+            return redirect(url_for('admin_page'))
+        if session.get('role') == 'mentor':
+            return redirect(url_for('mentor_page'))
         return redirect(url_for('index'))
     return render_template('register.html')
 
@@ -135,6 +154,12 @@ def register_page():
 @admin_required
 def admin_page():
     return render_template('admin.html')
+
+
+@app.route('/mentor')
+@mentor_required
+def mentor_page():
+    return render_template('mentor.html')
 
 
 @app.route('/logout')
@@ -500,6 +525,28 @@ def api_admin_delete_student(username):
         return jsonify({"error": str(e)}), 400
 
 
+@app.route('/api/admin/students/edit', methods=['POST'])
+@admin_required
+def api_admin_edit_student():
+    import user_manager
+    data = request.json or {}
+    username = data.get('username')
+    full_name = data.get('full_name')
+    password = data.get('password')
+    mentor_email = data.get('mentor_email', '')
+
+    if not username or not full_name:
+        return jsonify({"error": "Username and full name are required."}), 400
+
+    try:
+        user_manager.update_student(username, full_name, password, mentor_email)
+        return jsonify({"status": "success"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {e}"}), 500
+
+
 @app.route('/api/admin/create-folder', methods=['POST'])
 @admin_required
 def api_admin_create_folder():
@@ -543,14 +590,16 @@ def api_admin_mentors():
 def api_admin_create_mentor():
     import user_manager
     data = request.json or {}
+    username = data.get('username', '').strip().lower()
     name = data.get('name', '').strip()
     email = data.get('email', '').strip()
+    password = data.get('password', '')
 
-    if not name or not email:
-        return jsonify({"error": "Mentor name and email are required."}), 400
+    if not username or not name or not email or not password:
+        return jsonify({"error": "Username, name, email, and password are required."}), 400
 
     try:
-        user_manager.create_mentor(name, email)
+        user_manager.create_mentor(username, name, password, email)
         return jsonify({"status": "success"})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -563,11 +612,42 @@ def api_admin_create_mentor():
 def api_admin_delete_mentor(mentor_id):
     import user_manager
     try:
-        if user_manager.delete_mentor(mentor_id):
+        conn = user_manager.get_db()
+        cursor = conn.execute("SELECT username FROM users WHERE id = ? AND role = 'mentor'", (mentor_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "Mentor not found."}), 404
+        username = row["username"]
+        conn.close()
+        
+        if user_manager.delete_mentor_by_username(username):
             return jsonify({"status": "success"})
-        return jsonify({"error": "Mentor not found."}), 404
+        return jsonify({"error": "Failed to delete mentor user."}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/admin/mentors/edit', methods=['POST'])
+@admin_required
+def api_admin_edit_mentor():
+    import user_manager
+    data = request.json or {}
+    username = data.get('username')
+    full_name = data.get('full_name')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not username or not full_name or not email:
+        return jsonify({"error": "Username, full name, and email are required."}), 400
+
+    try:
+        user_manager.update_mentor(username, full_name, email, password)
+        return jsonify({"status": "success"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {e}"}), 500
 
 
 @app.route('/api/admin/assign-mentor', methods=['POST'])
@@ -588,6 +668,128 @@ def api_admin_assign_mentor():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"Internal server error: {e}"}), 500
+
+
+# ───────────────────────── Mentor & Task APIs ─────────────────────────
+
+@app.route('/api/mentor/students', methods=['GET'])
+@mentor_required
+def api_mentor_students():
+    import user_manager
+    mentor = user_manager.get_user_by_username(session['username'])
+    mentor_email = mentor.get('email', '')
+    if not mentor_email:
+        return jsonify([])
+        
+    conn = user_manager.get_db()
+    cursor = conn.execute("""
+        SELECT username, full_name, email, mentor_email, role, created_at 
+        FROM users 
+        WHERE role = 'student' AND mentor_email = ?
+        ORDER BY created_at DESC
+    """, (mentor_email.strip().lower(),))
+    students = [user_manager._row_to_dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    base_dir = DEFAULT_USERS_DIR
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(base_dir)
+        
+    for s in students:
+        user_dir = os.path.join(base_dir, s['username'])
+        s['folder_exists'] = os.path.isdir(user_dir)
+        excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
+        s['excel_exists'] = os.path.isfile(excel_path)
+        
+    return jsonify(students)
+
+
+@app.route('/api/mentor/student-logs/<username>', methods=['GET'])
+@mentor_required
+def api_mentor_student_logs(username):
+    import user_manager
+    import excel_manager
+    
+    mentor = user_manager.get_user_by_username(session['username'])
+    student = user_manager.get_user_by_username(username)
+    
+    if not student or student.get('role') != 'student' or student.get('mentor_email') != mentor.get('email'):
+        return jsonify({"error": "Unauthorized to view this student's logs."}), 403
+        
+    date_val = request.args.get('date')
+    if not date_val:
+        return jsonify({"error": "Date parameter is required."}), 400
+        
+    filepath = get_user_filepath(username)
+    
+    try:
+        parts = date_val.split('-')
+        excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except Exception:
+        excel_date_str = date_val
+        
+    try:
+        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
+        return jsonify({
+            "filepath": filepath,
+            "slots": slots
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/mentor/tasks', methods=['GET'])
+@mentor_required
+def api_mentor_get_tasks():
+    import user_manager
+    tasks = user_manager.list_tasks_by_mentor(session['username'])
+    return jsonify(tasks)
+
+
+@app.route('/api/mentor/tasks', methods=['POST'])
+@mentor_required
+def api_mentor_create_task():
+    import user_manager
+    data = request.json or {}
+    student_username = data.get('student_username')
+    description = data.get('description', '').strip()
+    
+    if not student_username or not description:
+        return jsonify({"error": "Student username and task description are required."}), 400
+        
+    try:
+        user_manager.create_task(student_username, session['username'], description)
+        return jsonify({"status": "success"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/mentor/tasks/<int:task_id>', methods=['DELETE'])
+@mentor_required
+def api_mentor_delete_task(task_id):
+    import user_manager
+    if user_manager.delete_task(task_id, session['username']):
+        return jsonify({"status": "success"})
+    return jsonify({"error": "Task not found or unauthorized."}), 404
+
+
+@app.route('/api/student/tasks', methods=['GET'])
+@login_required
+def api_student_get_tasks():
+    import user_manager
+    tasks = user_manager.list_tasks_by_student(session['username'])
+    return jsonify(tasks)
+
+
+@app.route('/api/student/tasks/<int:task_id>/complete', methods=['POST'])
+@login_required
+def api_student_complete_task(task_id):
+    import user_manager
+    if user_manager.complete_task(task_id, session['username']):
+        return jsonify({"status": "success"})
+    return jsonify({"error": "Task not found or unauthorized."}), 404
 
 
 

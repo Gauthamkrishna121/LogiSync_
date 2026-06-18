@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — LogiSync</title>
@@ -39,6 +42,10 @@
                 <button class="nav-item" data-view="activity" data-tooltip="Activity" id="nav-activity">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Activity</span>
+                </button>
+                <button class="nav-item" data-view="mentor-tasks" data-tooltip="Mentor Tasks" id="nav-mentor-tasks">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Mentor Tasks</span>
                 </button>
 
                 <div class="nav-section-label" style="margin-top: 0.75rem;">Settings</div>
@@ -257,6 +264,35 @@
                                 <i class="fa-solid fa-rotate"></i> Load Timesheet
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                <!-- ── VIEW: Mentor Tasks ── -->
+                <div id="view-mentor-tasks" class="view-panel hidden">
+                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-list-check" style="color: var(--accent);"></i> Tasks from Mentor
+                    </h3>
+                    <div class="card" style="max-width: 800px;">
+                        <div class="data-table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px; text-align: center;">Done</th>
+                                        <th>Task Description</th>
+                                        <th>Assigned Date</th>
+                                        <th>Assigned By</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="student-tasks-body">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                            No tasks assigned by your mentor yet.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 

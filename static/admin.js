@@ -6,10 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 
-    const globalConfigForm = document.getElementById('global-config-form');
-    const teamsSyncDirInput = document.getElementById('adm-teams-dir');
-    const startDateInput = document.getElementById('adm-start-date');
-    const saveConfigBtn = document.getElementById('save-config-btn');
+
 
     const addStudentForm = document.getElementById('add-student-form');
     const stuUsernameInput = document.getElementById('stu-username');
@@ -21,8 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const studentsTableBody = document.getElementById('students-table-body');
     const mentorsTableBody = document.getElementById('mentors-table-body');
     const addMentorForm = document.getElementById('add-mentor-form');
+    const menUsernameInput = document.getElementById('men-username');
     const menNameInput = document.getElementById('men-name');
     const menEmailInput = document.getElementById('men-email');
+    const menPasswordInput = document.getElementById('men-password');
     const addMentorBtn = document.getElementById('add-mentor-btn');
     const stuMentorEmailSelect = document.getElementById('stu-mentor-email');
 
@@ -34,7 +33,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalConfirm = document.getElementById('modal-confirm');
     let modalCallback = null;
 
-    let globalConfig = { teams_sync_dir: 'users', start_date: '2026-06-01' };
+    // Edit Student Modal DOM
+    const editStudentModal = document.getElementById('edit-student-modal');
+    const editStudentForm = document.getElementById('edit-student-form');
+    const editStuUsername = document.getElementById('edit-stu-username');
+    const editStuFullname = document.getElementById('edit-stu-fullname');
+    const editStuMentorEmail = document.getElementById('edit-stu-mentor-email');
+    const editStuPassword = document.getElementById('edit-stu-password');
+    const editStuCancel = document.getElementById('edit-stu-cancel');
+
+    // Edit Mentor Modal DOM
+    const editMentorModal = document.getElementById('edit-mentor-modal');
+    const editMentorForm = document.getElementById('edit-mentor-form');
+    const editMenUsername = document.getElementById('edit-men-username');
+    const editMenName = document.getElementById('edit-men-name');
+    const editMenEmail = document.getElementById('edit-men-email');
+    const editMenPassword = document.getElementById('edit-men-password');
+    const editMenCancel = document.getElementById('edit-men-cancel');
+
+    let globalConfig = { teams_sync_dir: 'users' };
     let globalMentors = [];
     let currentStudents = [];
 
@@ -126,56 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════
-    loadConfig();
     loadStudents();
-
-    // ═══════════════════════════════════════
-    // CONFIG
-    // ═══════════════════════════════════════
-    function loadConfig() {
-        fetch('/api/admin/config')
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to load config.');
-                return res.json();
-            })
-            .then(data => {
-                globalConfig = data;
-                teamsSyncDirInput.value = data.teams_sync_dir;
-                startDateInput.value = data.start_date;
-            })
-            .catch(err => showToast(err.message, 'warning'));
-    }
-
-    globalConfigForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const teams_sync_dir = teamsSyncDirInput.value.trim();
-        const start_date = startDateInput.value;
-
-        saveConfigBtn.disabled = true;
-        saveConfigBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-
-        fetch('/api/admin/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ teams_sync_dir, start_date })
-        })
-        .then(res => {
-            if (!res.ok) throw new Error('Failed to save settings.');
-            return res.json();
-        })
-        .then(data => {
-            globalConfig = data.config;
-            saveConfigBtn.disabled = false;
-            saveConfigBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Settings';
-            showToast('Settings saved successfully!', 'success');
-            loadStudents();
-        })
-        .catch(err => {
-            saveConfigBtn.disabled = false;
-            saveConfigBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Settings';
-            showToast(err.message, 'error');
-        });
-    });
 
     // ═══════════════════════════════════════
     // STUDENTS & MENTORS
@@ -217,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mentors.forEach(m => {
             const opt = document.createElement('option');
             opt.value = m.email;
-            opt.textContent = `${m.name} (${m.email})`;
+            opt.textContent = `${m.full_name} (${m.email})`;
             stuMentorEmailSelect.appendChild(opt);
         });
     }
@@ -258,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let mentorOptions = `<option value="" ${!s.mentor_email ? 'selected' : ''}>No Mentor Assigned</option>`;
             globalMentors.forEach(m => {
                 const isSelected = s.mentor_email === m.email ? 'selected' : '';
-                mentorOptions += `<option value="${m.email}" ${isSelected}>${m.name}</option>`;
+                mentorOptions += `<option value="${m.email}" ${isSelected}>${m.full_name}</option>`;
             });
 
             const mentorSelectHtml = `
@@ -284,6 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>
                     <div class="actions-cell">
                         ${folderBtn}
+                        <button class="btn btn-ghost btn-sm edit-student-btn" data-username="${s.username}" data-name="${s.full_name}" data-mentor-email="${s.mentor_email || ''}">
+                            <i class="fa-solid fa-user-pen"></i> Edit
+                        </button>
                         <button class="btn btn-danger btn-sm delete-student-btn" data-username="${s.username}" data-name="${s.full_name}">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -297,6 +268,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // Event listeners
         document.querySelectorAll('.create-folder-btn').forEach(btn => {
             btn.addEventListener('click', () => createStudentFolder(btn.getAttribute('data-username')));
+        });
+
+        document.querySelectorAll('.edit-student-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.getAttribute('data-username');
+                const name = btn.getAttribute('data-name');
+                const mentorEmail = btn.getAttribute('data-mentor-email');
+                
+                editStuUsername.value = username;
+                editStuFullname.value = name;
+                
+                editStuMentorEmail.innerHTML = '<option value="">No Mentor Assigned</option>';
+                globalMentors.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.email;
+                    opt.textContent = `${m.full_name} (${m.email})`;
+                    if (m.email === mentorEmail) {
+                        opt.selected = true;
+                    }
+                    editStuMentorEmail.appendChild(opt);
+                });
+                
+                editStuPassword.value = '';
+                editStudentModal.classList.remove('hidden');
+            });
         });
 
         document.querySelectorAll('.delete-student-btn').forEach(btn => {
@@ -434,19 +430,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${m.name}</strong></td>
+                <td><strong>${m.full_name}</strong></td>
                 <td>${m.email}</td>
                 <td><span class="badge badge-info">${assignedCount} Students</span></td>
                 <td>
-                    <button class="btn btn-danger btn-sm delete-mentor-btn" data-id="${m.id}" data-name="${m.name}">
-                        <i class="fa-solid fa-trash-can"></i> Delete
-                    </button>
+                    <div class="actions-cell">
+                        <button class="btn btn-ghost btn-sm edit-mentor-btn" data-username="${m.username}" data-name="${m.full_name}" data-email="${m.email}">
+                            <i class="fa-solid fa-user-pen"></i> Edit
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-mentor-btn" data-id="${m.id}" data-name="${m.full_name}">
+                            <i class="fa-solid fa-trash-can"></i> Delete
+                        </button>
+                    </div>
                 </td>
             `;
             mentorsTableBody.appendChild(tr);
         });
 
         // Event listeners
+        document.querySelectorAll('.edit-mentor-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.getAttribute('data-username');
+                const name = btn.getAttribute('data-name');
+                const email = btn.getAttribute('data-email');
+                
+                editMenUsername.value = username;
+                editMenName.value = name;
+                editMenEmail.value = email;
+                editMenPassword.value = '';
+                
+                editMentorModal.classList.remove('hidden');
+            });
+        });
+
         document.querySelectorAll('.delete-mentor-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
@@ -464,8 +480,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addMentorForm) {
         addMentorForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            const username = menUsernameInput.value.trim().toLowerCase();
             const name = menNameInput.value.trim();
             const email = menEmailInput.value.trim().toLowerCase();
+            const password = menPasswordInput.value;
 
             addMentorBtn.disabled = true;
             addMentorBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
@@ -473,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch('/api/admin/mentors', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email })
+                body: JSON.stringify({ username, name, email, password })
             })
             .then(res => {
                 if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed.'); });
@@ -483,8 +501,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 addMentorBtn.disabled = false;
                 addMentorBtn.innerHTML = '<i class="fa-solid fa-user-check"></i> Save Mentor';
                 showToast(`Added mentor "${name}" successfully!`, 'success');
+                menUsernameInput.value = '';
                 menNameInput.value = '';
                 menEmailInput.value = '';
+                menPasswordInput.value = '';
                 loadStudents(); // Reloads both students & mentors
             })
             .catch(err => {
@@ -506,6 +526,105 @@ document.addEventListener('DOMContentLoaded', () => {
             loadStudents();
         })
         .catch(err => showToast(err.message, 'error'));
+    }
+
+    // Edit Modals Submit / Cancel
+    if (editStuCancel) {
+        editStuCancel.addEventListener('click', () => {
+            editStudentModal.classList.add('hidden');
+        });
+    }
+    if (editStudentModal) {
+        editStudentModal.addEventListener('click', (e) => {
+            if (e.target === editStudentModal) {
+                editStudentModal.classList.add('hidden');
+            }
+        });
+    }
+
+    if (editStudentForm) {
+        editStudentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = editStuUsername.value;
+            const full_name = editStuFullname.value.trim();
+            const mentor_email = editStuMentorEmail.value;
+            const password = editStuPassword.value;
+
+            const saveBtn = document.getElementById('edit-stu-save');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            fetch('/api/admin/students/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, full_name, mentor_email, password })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed to edit student.'); });
+                return res.json();
+            })
+            .then(() => {
+                showToast(`Updated student @${username} successfully!`, 'success');
+                editStudentModal.classList.add('hidden');
+                loadStudents();
+            })
+            .catch(err => {
+                showToast(err.message, 'error');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Changes';
+            });
+        });
+    }
+
+    if (editMenCancel) {
+        editMenCancel.addEventListener('click', () => {
+            editMentorModal.classList.add('hidden');
+        });
+    }
+    if (editMentorModal) {
+        editMentorModal.addEventListener('click', (e) => {
+            if (e.target === editMentorModal) {
+                editMentorModal.classList.add('hidden');
+            }
+        });
+    }
+
+    if (editMentorForm) {
+        editMentorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = editMenUsername.value;
+            const full_name = editMenName.value.trim();
+            const email = editMenEmail.value.trim().toLowerCase();
+            const password = editMenPassword.value;
+
+            const saveBtn = document.getElementById('edit-men-save');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            fetch('/api/admin/mentors/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, full_name, email, password })
+            })
+            .then(res => {
+                if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed to edit mentor.'); });
+                return res.json();
+            })
+            .then(() => {
+                showToast(`Updated mentor "${full_name}" successfully!`, 'success');
+                editMentorModal.classList.add('hidden');
+                loadStudents();
+            })
+            .catch(err => {
+                showToast(err.message, 'error');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Changes';
+            });
+        });
     }
 
     // ═══════════════════════════════════════
@@ -534,4 +653,35 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => toast.remove(), 300);
         }, 4000);
     }
+
+    // ═══════════════════════════════════════
+    // THEME CONTROLLER
+    // ═══════════════════════════════════════
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+    }
+    
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        if (themeToggleBtn) {
+            const icon = themeToggleBtn.querySelector('i');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+        }
+    }
+    
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
+    }
+    
+    initTheme();
 });

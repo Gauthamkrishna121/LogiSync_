@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin — LogiSync Coordinator Portal</title>
@@ -11,7 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="admin-body">
     <div class="app-shell">
 
         <!-- ═══ Sidebar ═══ -->
@@ -36,10 +39,7 @@
                     <i class="fa-solid fa-chalkboard-user"></i>
                     <span>Mentors</span>
                 </button>
-                <button class="nav-item" data-view="settings" id="nav-settings">
-                    <i class="fa-solid fa-gears"></i>
-                    <span>Settings</span>
-                </button>
+
                 <button class="nav-item" data-view="add-student" id="nav-add-student">
                     <i class="fa-solid fa-user-plus"></i>
                     <span>Add Student</span>
@@ -77,7 +77,10 @@
                         <span class="header-date" id="header-date"></span>
                     </div>
                 </div>
-                <div class="header-right">
+                <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
+                    <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle theme" title="Toggle Light/Dark Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                     <div class="header-badge">
                         <span class="dot"></span>
                         <span>Admin Mode</span>
@@ -124,27 +127,7 @@
                     </div>
                 </div>
 
-                <!-- ── VIEW: Settings ── -->
-                <div id="view-settings" class="view-panel hidden">
-                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fa-solid fa-gears" style="color: var(--accent);"></i> Global Settings
-                    </h3>
-                    <div class="card" style="max-width: 540px;">
-                        <form id="global-config-form" class="config-panel">
 
-                            <div class="form-group">
-                                <label class="form-label" for="adm-start-date">
-                                    <i class="fa-solid fa-calendar-day"></i> Internship Start Date
-                                </label>
-                                <input type="date" id="adm-start-date" class="form-input" required>
-                                <span class="form-hint">Used to auto-calculate Week & Day numbers.</span>
-                            </div>
-                            <button type="submit" id="save-config-btn" class="btn btn-primary btn-block btn-lg">
-                                <i class="fa-solid fa-floppy-disk"></i> Save Settings
-                            </button>
-                        </form>
-                    </div>
-                </div>
 
                 <!-- ── VIEW: Add Student ── -->
                 <div id="view-add-student" class="view-panel hidden">
@@ -208,6 +191,13 @@
                             </h4>
                             <form id="add-mentor-form" class="config-panel">
                                 <div class="form-group">
+                                    <label class="form-label" for="men-username">
+                                        <i class="fa-solid fa-at"></i> Login Username
+                                    </label>
+                                    <input type="text" id="men-username" class="form-input" placeholder="e.g. jane" required pattern="^[a-zA-Z0-9_-]+$" title="Only letters, numbers, underscores and dashes">
+                                    <span class="form-hint">Lowercased, unique login name.</span>
+                                </div>
+                                <div class="form-group">
                                     <label class="form-label" for="men-name">
                                         <i class="fa-solid fa-id-card"></i> Mentor Name
                                     </label>
@@ -218,6 +208,12 @@
                                         <i class="fa-solid fa-envelope"></i> Mentor Email
                                     </label>
                                     <input type="email" id="men-email" class="form-input" placeholder="e.g. jane@example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="men-password">
+                                        <i class="fa-solid fa-key"></i> Temporary Password
+                                    </label>
+                                    <input type="text" id="men-password" class="form-input" placeholder="Enter password" required>
                                 </div>
                                 <button type="submit" id="add-mentor-btn" class="btn btn-primary btn-block btn-lg" style="margin-top: 0.5rem;">
                                     <i class="fa-solid fa-user-check"></i> Save Mentor
@@ -266,6 +262,93 @@
                 <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
                 <button class="btn btn-danger" id="modal-confirm">Confirm</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div class="modal-overlay hidden" id="edit-student-modal">
+        <div class="modal-card" style="max-width: 460px;">
+            <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-user-pen" style="color: var(--accent);"></i> Edit Intern Details
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                Modify student account details below.
+            </p>
+            <form id="edit-student-form" class="config-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="edit-stu-username">
+                        <i class="fa-solid fa-at"></i> Username
+                    </label>
+                    <input type="text" id="edit-stu-username" class="form-input" disabled style="opacity: 0.65; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-stu-fullname">
+                        <i class="fa-solid fa-id-card"></i> Full Name
+                    </label>
+                    <input type="text" id="edit-stu-fullname" class="form-input" required placeholder="Gautham Krishna">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-stu-mentor-email">
+                        <i class="fa-solid fa-chalkboard-user"></i> Assigned Mentor
+                    </label>
+                    <select id="edit-stu-mentor-email" class="form-select">
+                        <option value="">No Mentor Assigned</option>
+                        <!-- Rendered dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-stu-password">
+                        <i class="fa-solid fa-key"></i> New Password (leave blank to keep current)
+                    </label>
+                    <input type="text" id="edit-stu-password" class="form-input" placeholder="Enter new password">
+                </div>
+                <div class="modal-actions" style="margin-top: 0.5rem;">
+                    <button type="button" class="btn btn-ghost" id="edit-stu-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="edit-stu-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Mentor Modal -->
+    <div class="modal-overlay hidden" id="edit-mentor-modal">
+        <div class="modal-card" style="max-width: 460px;">
+            <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-user-pen" style="color: var(--accent);"></i> Edit Mentor Details
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                Modify mentor account details. Email changes will automatically cascade to assigned students.
+            </p>
+            <form id="edit-mentor-form" class="config-panel" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="edit-men-username">
+                        <i class="fa-solid fa-at"></i> Username
+                    </label>
+                    <input type="text" id="edit-men-username" class="form-input" disabled style="opacity: 0.65; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-men-name">
+                        <i class="fa-solid fa-id-card"></i> Mentor Name
+                    </label>
+                    <input type="text" id="edit-men-name" class="form-input" required placeholder="Jane Doe">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-men-email">
+                        <i class="fa-solid fa-envelope"></i> Mentor Email
+                    </label>
+                    <input type="email" id="edit-men-email" class="form-input" required placeholder="jane@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="edit-men-password">
+                        <i class="fa-solid fa-key"></i> New Password (leave blank to keep current)
+                    </label>
+                    <input type="text" id="edit-men-password" class="form-input" placeholder="Enter new password">
+                </div>
+                <div class="modal-actions" style="margin-top: 0.5rem;">
+                    <button type="button" class="btn btn-ghost" id="edit-men-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="edit-men-save">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
