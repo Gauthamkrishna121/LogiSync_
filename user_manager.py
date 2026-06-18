@@ -1,11 +1,9 @@
 import os
-import json
 import sqlite3
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_FILE = "users.db"
-LEGACY_USERS_FILE = "users.json"
 
 
 def get_db():
