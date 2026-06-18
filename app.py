@@ -438,7 +438,7 @@ def api_admin_students():
     for s in students:
         user_dir = os.path.join(base_dir, s['username'])
         s['folder_exists'] = os.path.isdir(user_dir)
-        excel_path = os.path.join(user_dir, "Internship_Log.xlsx")
+        excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
         s['excel_exists'] = os.path.isfile(excel_path)
 
     return jsonify(students)
@@ -468,7 +468,7 @@ def api_admin_create_student():
             user_dir = os.path.join(base_dir, student['username'])
             os.makedirs(user_dir, exist_ok=True)
 
-            excel_path = os.path.join(user_dir, "Internship_Log.xlsx")
+            excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
             if not os.path.exists(excel_path):
                 import excel_manager
                 wb, ws = excel_manager.get_timesheet_sheet(excel_path)
@@ -514,7 +514,7 @@ def api_admin_create_folder():
     user_dir = os.path.join(base_dir, username)
     os.makedirs(user_dir, exist_ok=True)
 
-    excel_path = os.path.join(user_dir, "Internship_Log.xlsx")
+    excel_path = os.path.join(user_dir, "Sandhata_Internship_Log.xlsx")
     if not os.path.exists(excel_path):
         import excel_manager
         try:
@@ -525,6 +525,70 @@ def api_admin_create_folder():
             return jsonify({"error": f"Failed to initialize Excel file: {e}"}), 500
 
     return jsonify({"status": "success", "user_dir": user_dir})
+
+
+@app.route('/api/admin/mentors', methods=['GET'])
+@admin_required
+def api_admin_mentors():
+    import user_manager
+    try:
+        mentors = user_manager.list_mentors()
+        return jsonify(mentors)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/admin/mentors', methods=['POST'])
+@admin_required
+def api_admin_create_mentor():
+    import user_manager
+    data = request.json or {}
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip()
+
+    if not name or not email:
+        return jsonify({"error": "Mentor name and email are required."}), 400
+
+    try:
+        user_manager.create_mentor(name, email)
+        return jsonify({"status": "success"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {e}"}), 500
+
+
+@app.route('/api/admin/mentors/<int:mentor_id>', methods=['DELETE'])
+@admin_required
+def api_admin_delete_mentor(mentor_id):
+    import user_manager
+    try:
+        if user_manager.delete_mentor(mentor_id):
+            return jsonify({"status": "success"})
+        return jsonify({"error": "Mentor not found."}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/admin/assign-mentor', methods=['POST'])
+@admin_required
+def api_admin_assign_mentor():
+    import user_manager
+    data = request.json or {}
+    username = data.get('username')
+    mentor_email = data.get('mentor_email', '')
+
+    if not username:
+        return jsonify({"error": "Username is required."}), 400
+
+    try:
+        user_manager.assign_student_to_mentor(username, mentor_email)
+        return jsonify({"status": "success"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {e}"}), 500
+
 
 
 if __name__ == '__main__':

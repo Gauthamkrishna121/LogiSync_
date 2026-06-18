@@ -30,6 +30,14 @@ def init_db():
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS mentors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
     conn.commit()
 
     # Check if we need to seed the default admin
@@ -123,10 +131,90 @@ def delete_user(username):
 def list_students():
     """List all users with role 'student'."""
     conn = get_db()
-    cursor = conn.execute("SELECT username, full_name, email, mentor_email, role, created_at FROM users WHERE role = 'student' ORDER BY created_at DESC")
+    cursor = conn.execute("""
+        SELECT u.username, u.full_name, u.email, u.mentor_email, m.name AS mentor_name, u.role, u.created_at 
+        FROM users u
+        LEFT JOIN mentors m ON u.mentor_email = m.email
+        WHERE u.role = 'student' 
+        ORDER BY u.created_at DESC
+    """)
     students = [_row_to_dict(row) for row in cursor.fetchall()]
     conn.close()
     return students
+
+
+def list_mentors():
+    """List all mentors."""
+    conn = get_db()
+    cursor = conn.execute("SELECT id, name, email, created_at FROM mentors ORDER BY name ASC")
+    mentors = [_row_to_dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return mentors
+
+
+def create_mentor(name, email):
+    """Create a new mentor."""
+    email_clean = email.strip().lower()
+    if not name.strip():
+        raise ValueError("Mentor name is required.")
+    if not email_clean:
+        raise ValueError("Mentor email is required.")
+    
+    conn = get_db()
+    # Check if email is already taken
+    cursor = conn.execute("SELECT id FROM mentors WHERE email = ?", (email_clean,))
+    if cursor.fetchone():
+        conn.close()
+        raise ValueError(f"Mentor with email '{email_clean}' already exists.")
+        
+    conn.execute(
+        "INSERT INTO mentors (name, email) VALUES (?, ?)",
+        (name.strip(), email_clean)
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_mentor(mentor_id):
+    """Delete a mentor by id."""
+    conn = get_db()
+    
+    # Get mentor email first so we can clear it from assigned students
+    cursor = conn.execute("SELECT email FROM mentors WHERE id = ?", (mentor_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+        
+    mentor_email = row["email"]
+    
+    # Clear mentor_email for students assigned to this mentor
+    conn.execute("UPDATE users SET mentor_email = '' WHERE mentor_email = ?", (mentor_email,))
+    
+    # Delete mentor
+    conn.execute("DELETE FROM mentors WHERE id = ?", (mentor_id,))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+def assign_student_to_mentor(username, mentor_email):
+    """Assign a student to a mentor by updating their mentor_email."""
+    conn = get_db()
+    # Check if student exists
+    cursor = conn.execute("SELECT id FROM users WHERE username = ? AND role = 'student'", (username.strip().lower(),))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError(f"Student '{username}' not found.")
+        
+    # Clear or update
+    email_val = mentor_email.strip().lower() if mentor_email else ""
+    
+    # Update student record
+    conn.execute("UPDATE users SET mentor_email = ? WHERE username = ?", (email_val, username.strip().lower()))
+    conn.commit()
+    conn.close()
 
 
 def get_user_by_username(username):
