@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     
     function initTheme() {
-        const savedTheme = 'light'; // Force light theme to start
+        const savedTheme = localStorage.getItem('theme') || 'dark';
         setTheme(savedTheme);
     }
     
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             setTheme(currentTheme === 'dark' ? 'light' : 'dark');
         });
     }
@@ -119,6 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Close mobile sidebar
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('active');
+
+        if (viewName === 'mentor-tasks') {
+            loadStudentTasks();
+        }
     }
 
     navItems.forEach(item => {
@@ -788,6 +792,99 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         playhead.style.display = 'none';
+    }
+
+    // ═══════════════════════════════════════
+    // STUDENT MENTOR TASKS LOGIC
+    // ═══════════════════════════════════════
+    const studentTasksBody = document.getElementById('student-tasks-body');
+
+    function loadStudentTasks() {
+        if (!studentTasksBody) return;
+        studentTasksBody.innerHTML = `
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                <div class="spinner spinner-sm" style="margin: 0 auto 0.75rem;"></div>
+                Loading tasks...
+            </td></tr>
+        `;
+
+        fetch('/api/student/tasks')
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load tasks.');
+                return res.json();
+            })
+            .then(tasks => renderStudentTasks(tasks))
+            .catch(err => {
+                studentTasksBody.innerHTML = `
+                    <tr><td colspan="5" style="text-align: center; color: var(--warning); padding: 2rem;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                        ${err.message}
+                    </td></tr>
+                `;
+            });
+    }
+
+    function renderStudentTasks(tasks) {
+        if (!studentTasksBody) return;
+        studentTasksBody.innerHTML = '';
+
+        if (tasks.length === 0) {
+            studentTasksBody.innerHTML = `
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                    <i class="fa-solid fa-list-check" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
+                    No tasks assigned by your mentor yet.
+                </td></tr>
+            `;
+            return;
+        }
+
+        tasks.forEach(t => {
+            const tr = document.createElement('tr');
+            
+            const isCompleted = t.status === 'completed';
+            const checkboxHtml = isCompleted 
+                ? '<i class="fa-solid fa-circle-check" style="color: var(--success); font-size: 1.25rem;"></i>' 
+                : `<input type="checkbox" class="complete-task-checkbox" data-id="${t.id}" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent);">`;
+
+            const statusBadge = isCompleted 
+                ? '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Completed</span>' 
+                : '<span class="badge badge-warning"><i class="fa-solid fa-hourglass"></i> Pending</span>';
+
+            tr.innerHTML = `
+                <td style="text-align: center; vertical-align: middle;">${checkboxHtml}</td>
+                <td style="${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.task_description}</td>
+                <td>${t.assigned_date}</td>
+                <td><strong>${t.mentor_name}</strong></td>
+                <td>${statusBadge}</td>
+            `;
+            studentTasksBody.appendChild(tr);
+        });
+
+        // Event listener for task checkboxes
+        document.querySelectorAll('.complete-task-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    const id = checkbox.getAttribute('data-id');
+                    completeStudentTask(id);
+                }
+            });
+        });
+    }
+
+    function completeStudentTask(id) {
+        fetch(`/api/student/tasks/${id}/complete`, { method: 'POST' })
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to complete task.');
+                return res.json();
+            })
+            .then(() => {
+                showToast('Task marked as completed!', 'success');
+                loadStudentTasks();
+            })
+            .catch(err => {
+                showToast(err.message, 'error');
+                loadStudentTasks();
+            });
     }
 
 });

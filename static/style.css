@@ -1446,3 +1446,124 @@ h1, h2, h3, h4 {
 @media (max-width: 480px) {
     .kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ADMIN PORTAL FORM STYLING OVERRIDES (Vibrant & Premium)
+   ═══════════════════════════════════════════════════════════ */
+.admin-body .config-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* Larger, more breathable gap */
+}
+
+.admin-body .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: relative;
+}
+
+.admin-body .form-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-secondary);
+    transition: all var(--t-normal) var(--ease-out);
+}
+
+.admin-body .form-label i {
+    color: var(--accent);
+    transition: all var(--t-normal) var(--ease-out);
+    margin-right: 0.2rem;
+}
+
+.admin-body .form-group:focus-within .form-label {
+    color: var(--accent-bright);
+    transform: translateX(4px);
+}
+
+.admin-body .form-group:focus-within .form-label i {
+    color: var(--accent-bright);
+    transform: scale(1.15);
+}
+
+.admin-body .form-input, 
+.admin-body .form-select, 
+.admin-body .form-textarea {
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm); /* Sleeker border-radius (8px) matching options dropdown */
+    color: var(--text-primary);
+    padding: 0.85rem 1.1rem; /* More breathable padding */
+    transition: all var(--t-normal) var(--ease-out);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    
+    /* Sliding border animation via background */
+    background-image: linear-gradient(90deg, var(--accent), var(--accent-bright), #8B5CF6);
+    background-size: 0% 2px;
+    background-position: bottom left;
+    background-repeat: no-repeat;
+}
+
+.admin-body .form-input:hover, 
+.admin-body .form-select:hover, 
+.admin-body .form-textarea:hover {
+    border-color: var(--border-hover);
+    background-color: rgba(255, 255, 255, 0.04);
+    transform: translateY(-1px);
+}
+
+.admin-body .form-input:focus, 
+.admin-body .form-select:focus, 
+.admin-body .form-textarea:focus {
+    border-color: rgba(6, 182, 212, 0.4);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 25px rgba(6, 182, 212, 0.18);
+    background-color: rgba(18, 20, 32, 0.8);
+    background-size: 100% 2px;
+    transform: translateY(-2px);
+}
+
+/* Explicit style for dropdown option elements to look premium and readable on dark themes */
+.admin-body .form-select option {
+    background-color: #121420; /* Deep card background */
+    color: var(--text-primary); /* Ensuring text is primary white/light gray */
+}
+
+/* Modals should also have premium style */
+.admin-body .modal-card {
+    background: rgba(22, 25, 41, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(6, 182, 212, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 2.25rem;
+}
+
+.admin-body .modal-card h3 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+}
+
+/* Enhancements for checkboxes */
+.admin-body .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+}
+
+.admin-body .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-sm);
+    accent-color: var(--accent);
+    cursor: pointer;
+    transition: transform var(--t-fast) ease;
+}
+
+.admin-body .checkbox-group input[type="checkbox"]:hover {
+    transform: scale(1.08);
+}
