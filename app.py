@@ -787,7 +787,35 @@ def api_student_get_tasks():
 @login_required
 def api_student_complete_task(task_id):
     import user_manager
-    if user_manager.complete_task(task_id, session['username']):
+    
+    # Read text response
+    response_message = request.form.get('response_message', '').strip() or None
+    
+    # Read attachment file
+    file = request.files.get('file')
+    attachment_filename = None
+    attachment_path = None
+    
+    if file and file.filename:
+        from werkzeug.utils import secure_filename
+        filename = secure_filename(file.filename)
+        # Create uploads directory under static
+        upload_folder = os.path.join(app.static_folder, 'uploads', 'tasks', str(task_id))
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        dest_path = os.path.join(upload_folder, filename)
+        file.save(dest_path)
+        
+        attachment_filename = file.filename
+        attachment_path = f"/static/uploads/tasks/{task_id}/{filename}"
+        
+    if user_manager.complete_task(
+        task_id, 
+        session['username'], 
+        response_message=response_message, 
+        attachment_filename=attachment_filename, 
+        attachment_path=attachment_path
+    ):
         return jsonify({"status": "success"})
     return jsonify({"error": "Task not found or unauthorized."}), 404
 

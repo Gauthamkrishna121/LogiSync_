@@ -850,9 +850,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Completed</span>' 
                 : '<span class="badge badge-warning"><i class="fa-solid fa-hourglass"></i> Pending</span>';
 
+            let responseHtml = '';
+            if (isCompleted) {
+                if (t.response_message || t.attachment_filename) {
+                    responseHtml = '<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--border);">';
+                    if (t.response_message) {
+                        responseHtml += `<div><strong>Response:</strong> ${t.response_message}</div>`;
+                    }
+                    if (t.attachment_filename) {
+                        responseHtml += `<div style="margin-top: 0.25rem;"><a href="${t.attachment_path}" target="_blank" style="color: var(--accent);"><i class="fa-solid fa-paperclip"></i> ${t.attachment_filename}</a></div>`;
+                    }
+                    responseHtml += '</div>';
+                }
+            }
+
             tr.innerHTML = `
                 <td style="text-align: center; vertical-align: middle;">${checkboxHtml}</td>
-                <td style="${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.task_description}</td>
+                <td>
+                    <div style="${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.task_description}</div>
+                    ${responseHtml}
+                </td>
                 <td>${t.assigned_date}</td>
                 <td><strong>${t.mentor_name}</strong></td>
                 <td>${statusBadge}</td>
@@ -864,27 +881,74 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.complete-task-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 if (checkbox.checked) {
+                    checkbox.checked = false; // Reset checkbox state immediately since we're opening modal
                     const id = checkbox.getAttribute('data-id');
-                    completeStudentTask(id);
+                    openCompleteTaskModal(id);
                 }
             });
         });
     }
 
-    function completeStudentTask(id) {
-        fetch(`/api/student/tasks/${id}/complete`, { method: 'POST' })
+    // Complete Task Modal DOM
+    const completeTaskModal = document.getElementById('complete-task-modal');
+    const completeTaskForm = document.getElementById('complete-task-form');
+    const completeTaskIdInput = document.getElementById('complete-task-id');
+    const taskResponseMsgInput = document.getElementById('task-response-msg');
+    const taskAttachmentInput = document.getElementById('task-attachment');
+    const completeTaskCancel = document.getElementById('complete-task-cancel');
+
+    function openCompleteTaskModal(id) {
+        if (!completeTaskModal) return;
+        completeTaskIdInput.value = id;
+        taskResponseMsgInput.value = '';
+        taskAttachmentInput.value = '';
+        completeTaskModal.classList.remove('hidden');
+    }
+
+    if (completeTaskCancel) {
+        completeTaskCancel.addEventListener('click', () => {
+            completeTaskModal.classList.add('hidden');
+        });
+    }
+
+    if (completeTaskForm) {
+        completeTaskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = completeTaskIdInput.value;
+            const response_message = taskResponseMsgInput.value.trim();
+            const file = taskAttachmentInput.files[0];
+
+            const submitBtn = document.getElementById('complete-task-submit');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+
+            const formData = new FormData();
+            formData.append('response_message', response_message);
+            if (file) {
+                formData.append('file', file);
+            }
+
+            fetch(`/api/student/tasks/${id}/complete`, {
+                method: 'POST',
+                body: formData
+            })
             .then(res => {
                 if (!res.ok) throw new Error('Failed to complete task.');
                 return res.json();
             })
             .then(() => {
-                showToast('Task marked as completed!', 'success');
+                showToast('Task completed successfully!', 'success');
+                completeTaskModal.classList.add('hidden');
                 loadStudentTasks();
             })
             .catch(err => {
                 showToast(err.message, 'error');
-                loadStudentTasks();
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Response';
             });
+        });
     }
 
 });

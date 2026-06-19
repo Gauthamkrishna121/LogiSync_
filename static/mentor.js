@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tasks.length === 0) {
             tasksTableBody.innerHTML = `
-                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
                     <i class="fa-solid fa-list-check" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
                     No tasks currently assigned to your students.
                 </td></tr>
@@ -363,11 +363,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Completed</span>'
                 : '<span class="badge badge-warning"><i class="fa-solid fa-hourglass"></i> Pending</span>';
 
+            let responseContent = '<span style="color: var(--text-muted); font-style: italic;">No response yet</span>';
+            if (t.status === 'completed') {
+                responseContent = '';
+                if (t.response_message) {
+                    responseContent += `<div style="font-size: 0.85rem; color: var(--text-primary); max-width: 200px; word-break: break-word;">${t.response_message}</div>`;
+                }
+                if (t.attachment_filename) {
+                    responseContent += `<div style="margin-top: 0.25rem;"><a href="${t.attachment_path}" target="_blank" class="badge badge-info" style="font-size: 0.7rem;"><i class="fa-solid fa-paperclip"></i> ${t.attachment_filename}</a></div>`;
+                }
+                if (!responseContent) {
+                    responseContent = '<span style="color: var(--text-muted); font-style: italic;">Completed</span>';
+                }
+            }
+
             tr.innerHTML = `
                 <td><strong>${t.student_name}</strong><br><span style="font-size: 0.72rem; color: var(--text-muted);">@${t.student_username}</span></td>
-                <td style="max-width: 300px; word-break: break-word;">${t.task_description}</td>
+                <td style="max-width: 250px; word-break: break-word;">${t.task_description}</td>
                 <td>${t.assigned_date}</td>
                 <td>${statusBadge}</td>
+                <td>${responseContent}</td>
                 <td>
                     <button class="btn btn-danger btn-sm delete-task-btn" data-id="${t.id}">
                         <i class="fa-solid fa-trash-can"></i> Delete

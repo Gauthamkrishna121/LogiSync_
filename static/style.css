@@ -1298,7 +1298,7 @@ h1, h2, h3, h4 {
 .student-name { font-weight: 600; color: var(--text-primary); font-size: 0.875rem; }
 .student-username { font-size: 0.75rem; color: var(--text-secondary); }
 
-.actions-cell { display: flex; gap: 0.4rem; }
+.actions-cell { display: flex; gap: 40px ; }
 
 .path-cell {
     font-size: 0.75rem; color: var(--text-secondary);

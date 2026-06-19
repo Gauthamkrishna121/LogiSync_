@@ -42,10 +42,18 @@ def init_db():
             task_description TEXT NOT NULL,
             assigned_date TEXT NOT NULL DEFAULT (date('now')),
             status TEXT NOT NULL DEFAULT 'pending',
+            response_message TEXT,
+            attachment_filename TEXT,
+            attachment_path TEXT,
             FOREIGN KEY (student_username) REFERENCES users(username) ON DELETE CASCADE,
             FOREIGN KEY (mentor_username) REFERENCES users(username) ON DELETE CASCADE
         )
     """)
+    for col in ["response_message", "attachment_filename", "attachment_path"]:
+        try:
+            conn.execute(f"ALTER TABLE student_tasks ADD COLUMN {col} TEXT")
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
 
     # Check if we need to seed the default admin
@@ -221,7 +229,7 @@ def list_tasks_by_mentor(mentor_username):
     """List all tasks created by a specific mentor."""
     conn = get_db()
     cursor = conn.execute("""
-        SELECT t.id, t.student_username, u.full_name AS student_name, t.mentor_username, t.task_description, t.assigned_date, t.status 
+        SELECT t.id, t.student_username, u.full_name AS student_name, t.mentor_username, t.task_description, t.assigned_date, t.status, t.response_message, t.attachment_filename, t.attachment_path
         FROM student_tasks t
         JOIN users u ON t.student_username = u.username
         WHERE t.mentor_username = ?
@@ -236,7 +244,7 @@ def list_tasks_by_student(student_username):
     """List all tasks assigned to a specific student."""
     conn = get_db()
     cursor = conn.execute("""
-        SELECT t.id, t.student_username, t.mentor_username, m.full_name AS mentor_name, t.task_description, t.assigned_date, t.status 
+        SELECT t.id, t.student_username, t.mentor_username, m.full_name AS mentor_name, t.task_description, t.assigned_date, t.status, t.response_message, t.attachment_filename, t.attachment_path
         FROM student_tasks t
         JOIN users m ON t.mentor_username = m.username
         WHERE t.student_username = ?
@@ -247,10 +255,13 @@ def list_tasks_by_student(student_username):
     return tasks
 
 
-def complete_task(task_id, student_username):
-    """Mark a student task as completed."""
+def complete_task(task_id, student_username, response_message=None, attachment_filename=None, attachment_path=None):
+    """Mark a student task as completed with response details."""
     conn = get_db()
-    cursor = conn.execute("UPDATE student_tasks SET status = 'completed' WHERE id = ? AND student_username = ?", (task_id, student_username.strip().lower()))
+    cursor = conn.execute(
+        "UPDATE student_tasks SET status = 'completed', response_message = ?, attachment_filename = ?, attachment_path = ? WHERE id = ? AND student_username = ?",
+        (response_message, attachment_filename, attachment_path, task_id, student_username.strip().lower())
+    )
     conn.commit()
     updated = cursor.rowcount > 0
     conn.close()
