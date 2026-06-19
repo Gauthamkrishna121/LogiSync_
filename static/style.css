@@ -1567,3 +1567,148 @@ h1, h2, h3, h4 {
 .admin-body .checkbox-group input[type="checkbox"]:hover {
     transform: scale(1.08);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   INTERNSHIP FILES & DOCUMENT MANAGER
+   ═══════════════════════════════════════════════════════════ */
+.files-grid-container {
+    transition: all var(--t-normal) ease;
+}
+
+.files-grid {
+    animation: fadeInUp var(--t-normal) var(--ease-out);
+}
+
+.file-item-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    transition: all var(--t-normal) var(--ease-spring);
+    min-height: 155px;
+    justify-content: space-between;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.file-item-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md), var(--shadow-accent);
+    background: var(--bg-hover);
+}
+
+.file-item-icon {
+    font-size: 2.75rem;
+    margin-bottom: 0.75rem;
+    transition: transform var(--t-normal) var(--ease-spring);
+}
+.file-item-card:hover .file-item-icon {
+    transform: scale(1.15);
+}
+
+/* Type specific color icons */
+.icon-folder { color: var(--accent) !important; }
+.icon-pdf { color: #EF4444 !important; }
+.icon-word { color: #3B82F6 !important; }
+.icon-excel { color: #10B981 !important; }
+.icon-image { color: #EC4899 !important; }
+.icon-code { color: #8B5CF6 !important; }
+.icon-zip { color: #F59E0B !important; }
+.icon-generic { color: var(--text-secondary) !important; }
+
+.file-item-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    margin-bottom: 0.35rem;
+    word-break: break-all;
+    line-height: 1.3;
+}
+
+.file-item-meta {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.file-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--t-fast) ease;
+    margin-top: auto;
+}
+.file-item-card:hover .file-item-actions {
+    opacity: 1;
+}
+
+.file-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--t-fast) ease;
+}
+
+.file-action-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.file-action-btn.btn-download:hover {
+    background: var(--success-bg) !important;
+    color: var(--success) !important;
+    border-color: var(--success) !important;
+}
+
+.file-action-btn.btn-delete:hover {
+    background: var(--error-bg) !important;
+    color: var(--error) !important;
+    border-color: var(--error) !important;
+}
+
+/* Breadcrumb styles */
+.files-breadcrumbs-container {
+    animation: fadeInUp var(--t-normal) var(--ease-out);
+}
+.breadcrumb-item {
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color var(--t-fast) ease;
+    font-weight: 500;
+}
+.breadcrumb-item:hover {
+    color: var(--accent-bright);
+}
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: default;
+}
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+

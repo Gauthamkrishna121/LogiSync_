@@ -47,6 +47,10 @@
                     <i class="fa-solid fa-list-check"></i>
                     <span>Mentor Tasks</span>
                 </button>
+                <button class="nav-item" data-view="files" data-tooltip="Internship Files" id="nav-files">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span>Internship Files</span>
+                </button>
 
                 <div class="nav-section-label" style="margin-top: 0.75rem;">Settings</div>
                 <button class="nav-item" data-view="config" data-tooltip="Configuration" id="nav-config">
@@ -292,6 +296,56 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── VIEW: Internship Files ── -->
+                <div id="view-files" class="view-panel hidden">
+                    <div class="files-header-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap;">
+                        <h3 style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                            <i class="fa-solid fa-folder-open" style="color: var(--accent);"></i>
+                            <span>Internship Files & Documents</span>
+                        </h3>
+                        <div class="files-actions" style="display: flex; gap: 0.75rem;">
+                            <button id="files-new-folder-btn" class="btn btn-ghost">
+                                <i class="fa-solid fa-folder-plus"></i> New Folder
+                            </button>
+                            <label class="btn btn-primary" style="margin: 0; display: inline-flex; align-items: center; cursor: pointer;">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
+                                <input type="file" id="files-upload-input" multiple style="display: none;">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Breadcrumbs -->
+                    <div class="files-breadcrumbs-container" style="background: var(--bg-card); padding: 0.75rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                        <div id="files-breadcrumbs" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <!-- Breadcrumbs rendered dynamically by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Drag & Drop Zone / Grid Container -->
+                    <div id="files-drag-zone" class="files-grid-container" style="position: relative; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--bg-card); padding: 2rem; min-height: 400px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: border-color var(--t-normal) ease;">
+                        <div class="files-drag-overlay" id="files-drag-overlay" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(6, 182, 212, 0.15); border: 2px dashed var(--accent); border-radius: var(--radius-lg); align-items: center; justify-content: center; z-index: 10; pointer-events: none; backdrop-filter: blur(4px);">
+                            <div style="text-align: center; color: var(--accent-bright);">
+                                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 3rem; margin-bottom: 1rem; animation: bounce 1.5s infinite;"></i>
+                                <h4 style="margin: 0; font-size: 1.25rem;">Drop files to upload here</h4>
+                            </div>
+                        </div>
+
+                        <!-- Grid -->
+                        <div class="files-grid" id="files-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.25rem;">
+                            <!-- Items rendered dynamically by JS -->
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="files-empty-state" class="empty-state" style="display: none; padding: 4rem 2rem;">
+                            <div class="empty-icon">
+                                <i class="fa-solid fa-folder-open"></i>
+                            </div>
+                            <h3>No files or folders yet</h3>
+                            <p>Drag and drop files here, or use the buttons above to get started with your internship archive.</p>
                         </div>
                     </div>
                 </div>
