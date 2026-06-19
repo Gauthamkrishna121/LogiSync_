@@ -1134,7 +1134,7 @@ h1, h2, h3, h4 {
     margin-bottom: 1.5rem; animation: float 4s ease-in-out infinite;
     box-shadow: var(--shadow-md);
 }
-.empty-state h3 { font-size: 1.25rem; margin-bottom: 0.5rem; font-weight: 600; color: #ffffff; }
+.empty-state h3 { font-size: 1.25rem; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary); }
 .empty-state p { max-width: 380px; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6; }
 
 
