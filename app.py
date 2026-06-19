@@ -820,6 +820,200 @@ def api_student_complete_task(task_id):
     return jsonify({"error": "Task not found or unauthorized."}), 404
 
 
+def get_user_documents_dir(username):
+    base_dir = DEFAULT_USERS_DIR
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(base_dir)
+    username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
+    if not username_clean:
+        username_clean = "Default_User"
+    user_docs_dir = os.path.join(base_dir, username_clean, "documents")
+    os.makedirs(user_docs_dir, exist_ok=True)
+    return user_docs_dir
+
+
+def sanitize_subpath(user_docs_dir, subpath):
+    if not subpath:
+        return user_docs_dir
+    subpath_clean = subpath.replace('\\', '/').strip('/')
+    parts = []
+    for part in subpath_clean.split('/'):
+        if part in ('.', '..', ''):
+            continue
+        parts.append(part)
+    safe_path = os.path.abspath(os.path.join(user_docs_dir, *parts))
+    if not safe_path.startswith(user_docs_dir):
+        return user_docs_dir
+    return safe_path
+
+
+# ───────────────────────── Student Files & Documents APIs ─────────────────────────
+
+@app.route('/api/student/files', methods=['GET'])
+@login_required
+def api_list_files():
+    username = session['username']
+    subpath = request.args.get('path', '')
+    
+    user_docs_dir = get_user_documents_dir(username)
+    target_dir = sanitize_subpath(user_docs_dir, subpath)
+    
+    if not os.path.exists(target_dir):
+        return jsonify({"error": "Directory does not exist."}), 404
+        
+    items = []
+    try:
+        for entry in os.scandir(target_dir):
+            stat = entry.stat()
+            is_dir = entry.is_dir()
+            item_count = 0
+            if is_dir:
+                try:
+                    item_count = len([n for n in os.listdir(entry.path)])
+                except Exception:
+                    pass
+            
+            items.append({
+                "name": entry.name,
+                "is_dir": is_dir,
+                "size": stat.st_size if not is_dir else 0,
+                "modified": datetime.datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                "item_count": item_count
+            })
+        
+        items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+        
+        relative_path = os.path.relpath(target_dir, user_docs_dir).replace('\\', '/')
+        if relative_path == '.':
+            relative_path = ''
+            
+        return jsonify({
+            "current_path": relative_path,
+            "items": items
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student/files/create-folder', methods=['POST'])
+@login_required
+def api_create_folder():
+    username = session['username']
+    data = request.json or {}
+    subpath = data.get('path', '')
+    folder_name = data.get('folder_name', '').strip()
+    
+    if not folder_name:
+        return jsonify({"error": "Folder name is required."}), 400
+        
+    folder_name = "".join(c for c in folder_name if c.isalnum() or c in (' ', '_', '-')).strip()
+    if not folder_name:
+        return jsonify({"error": "Invalid folder name."}), 400
+        
+    user_docs_dir = get_user_documents_dir(username)
+    target_dir = sanitize_subpath(user_docs_dir, subpath)
+    new_folder_path = os.path.join(target_dir, folder_name)
+    
+    if not os.path.abspath(new_folder_path).startswith(user_docs_dir):
+        return jsonify({"error": "Unauthorized action."}), 403
+        
+    if os.path.exists(new_folder_path):
+        return jsonify({"error": "A file or folder with that name already exists."}), 400
+        
+    try:
+        os.makedirs(new_folder_path, exist_ok=True)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student/files/upload', methods=['POST'])
+@login_required
+def api_upload_file():
+    username = session['username']
+    subpath = request.form.get('path', '')
+    
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded."}), 400
+        
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({"error": "Empty filename."}), 400
+        
+    from werkzeug.utils import secure_filename
+    filename = secure_filename(file.filename)
+    if not filename:
+        return jsonify({"error": "Invalid filename."}), 400
+        
+    user_docs_dir = get_user_documents_dir(username)
+    target_dir = sanitize_subpath(user_docs_dir, subpath)
+    dest_path = os.path.join(target_dir, filename)
+    
+    if not os.path.abspath(dest_path).startswith(user_docs_dir):
+        return jsonify({"error": "Unauthorized action."}), 403
+        
+    try:
+        file.save(dest_path)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student/files/delete', methods=['DELETE'])
+@login_required
+def api_delete_file():
+    username = session['username']
+    data = request.json or {}
+    subpath = data.get('path', '')
+    name = data.get('name', '').strip()
+    
+    if not name:
+        return jsonify({"error": "Item name is required."}), 400
+        
+    user_docs_dir = get_user_documents_dir(username)
+    target_dir = sanitize_subpath(user_docs_dir, subpath)
+    target_item = os.path.join(target_dir, name)
+    
+    if not os.path.abspath(target_item).startswith(user_docs_dir) or os.path.abspath(target_item) == user_docs_dir:
+        return jsonify({"error": "Unauthorized action."}), 403
+        
+    if not os.path.exists(target_item):
+        return jsonify({"error": "Item not found."}), 404
+        
+    try:
+        import shutil
+        if os.path.isdir(target_item):
+            shutil.rmtree(target_item)
+        else:
+            os.remove(target_item)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student/files/download', methods=['GET'])
+@login_required
+def api_download_file():
+    username = session['username']
+    subpath = request.args.get('path', '')
+    name = request.args.get('name', '').strip()
+    
+    if not name:
+        return jsonify({"error": "Filename is required."}), 400
+        
+    user_docs_dir = get_user_documents_dir(username)
+    target_dir = sanitize_subpath(user_docs_dir, subpath)
+    target_file = os.path.join(target_dir, name)
+    
+    if not os.path.abspath(target_file).startswith(user_docs_dir) or not os.path.isfile(target_file):
+        return jsonify({"error": "Unauthorized action."}), 403
+        
+    from flask import send_file
+    try:
+        return send_file(target_file, as_attachment=True, download_name=name)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     import user_manager

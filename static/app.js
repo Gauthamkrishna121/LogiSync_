@@ -24,11 +24,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const timesheetWeekBadge = document.getElementById('timesheet-week-badge');
     const weekDaysGrid = document.getElementById('week-days-grid');
 
+    // Files Manager elements
+    const filesGrid = document.getElementById('files-grid');
+    const filesEmptyState = document.getElementById('files-empty-state');
+    const filesNewFolderBtn = document.getElementById('files-new-folder-btn');
+    const filesUploadInput = document.getElementById('files-upload-input');
+    const filesBreadcrumbs = document.getElementById('files-breadcrumbs');
+    const filesDragZone = document.getElementById('files-drag-zone');
+    const filesDragOverlay = document.getElementById('files-drag-overlay');
+
     // Activity log stored locally
     const activityLog = [];
 
     // Current app state cache
+    let currentWeekNum = 1;
+    let currentDayNum = 1;
     let currentSlots = [];
+    let currentFilePath = ''; // Track current folder subpath
 
     // ═══════════════════════════════════════
     // THEME CONTROLLER
@@ -119,6 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Close mobile sidebar
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('active');
+
+        // If transitioning to timesheet view, load the weekly history summary
+        if (viewName === 'timesheet') {
+            const week_num = parseInt(cfgWeek.value) || currentWeekNum || 1;
+            loadWeeklyProgress(week_num);
+        } else if (viewName === 'files') {
+            loadFiles(currentFilePath);
+        }
 
         if (viewName === 'mentor-tasks') {
             loadStudentTasks();
@@ -949,6 +969,264 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerHTML = 'Submit Response';
             });
         });
+    }
+
+    // ═══════════════════════════════════════
+    // STUDENT FILES & DOCUMENT MANAGER LOGIC
+    // ═══════════════════════════════════════
+    function loadFiles(path) {
+        if (!filesGrid) return;
+        currentFilePath = path || '';
+
+        filesGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: var(--text-secondary);">
+                <div class="spinner spinner-sm" style="margin: 0 auto 0.75rem;"></div>
+                Scanning documents...
+            </div>
+        `;
+        if (filesEmptyState) filesEmptyState.style.display = 'none';
+
+        fetch(`/api/student/files?path=${encodeURIComponent(currentFilePath)}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load directory files.');
+                return res.json();
+            })
+            .then(data => {
+                renderBreadcrumbs(data.current_path);
+                renderFiles(data.items);
+            })
+            .catch(err => {
+                filesGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--error);">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        <p>${err.message}</p>
+                    </div>
+                `;
+            });
+    }
+
+    function getFileTypeDetails(filename, isDir) {
+        if (isDir) return { icon: 'fa-solid fa-folder-closed icon-folder', type: 'folder' };
+        const ext = filename.split('.').pop().toLowerCase();
+        if (ext === 'pdf') return { icon: 'fa-solid fa-file-pdf icon-pdf', type: 'pdf' };
+        if (['doc', 'docx', 'rtf'].includes(ext)) return { icon: 'fa-solid fa-file-word icon-word', type: 'word' };
+        if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'fa-solid fa-file-excel icon-excel', type: 'excel' };
+        if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) return { icon: 'fa-solid fa-file-image icon-image', type: 'image' };
+        if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) return { icon: 'fa-solid fa-file-zipper icon-zip', type: 'zip' };
+        if (['js', 'py', 'html', 'css', 'json', 'c', 'cpp'].includes(ext)) return { icon: 'fa-solid fa-file-code icon-code', type: 'code' };
+        return { icon: 'fa-solid fa-file icon-generic', type: 'generic' };
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function renderFiles(items) {
+        if (!filesGrid) return;
+        filesGrid.innerHTML = '';
+
+        if (items.length === 0) {
+            if (filesEmptyState) filesEmptyState.style.display = 'flex';
+            return;
+        }
+
+        if (filesEmptyState) filesEmptyState.style.display = 'none';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'file-item-card';
+
+            const details = getFileTypeDetails(item.name, item.is_dir);
+            const sizeLabel = item.is_dir ? `${item.item_count} items` : formatBytes(item.size);
+
+            card.innerHTML = `
+                <div class="file-item-icon">
+                    <i class="${details.icon}"></i>
+                </div>
+                <div class="file-item-name" title="${item.name}">${item.name}</div>
+                <div class="file-item-meta">${sizeLabel} • ${item.modified.split(' ')[0]}</div>
+                <div class="file-item-actions">
+                    ${!item.is_dir ? `
+                        <button class="file-action-btn btn-download" title="Download">
+                            <i class="fa-solid fa-download"></i>
+                        </button>
+                    ` : ''}
+                    <button class="file-action-btn btn-delete" title="Delete">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `;
+
+            // Card click behavior
+            card.addEventListener('click', (e) => {
+                // Ignore clicks on action buttons
+                if (e.target.closest('.file-action-btn')) return;
+
+                if (item.is_dir) {
+                    const newPath = currentFilePath ? `${currentFilePath}/${item.name}` : item.name;
+                    loadFiles(newPath);
+                }
+            });
+
+            // Action triggers
+            const downloadBtn = card.querySelector('.btn-download');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    const url = `/api/student/files/download?path=${encodeURIComponent(currentFilePath)}&name=${encodeURIComponent(item.name)}`;
+                    window.open(url, '_blank');
+                });
+            }
+
+            const deleteBtn = card.querySelector('.btn-delete');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`Are you sure you want to delete ${item.is_dir ? 'folder' : 'file'} "${item.name}"? This action cannot be undone.`)) {
+                        fetch('/api/student/files/delete', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: currentFilePath, name: item.name })
+                        })
+                        .then(res => {
+                            if (!res.ok) throw new Error('Failed to delete.');
+                            showToast(`Deleted ${item.name} successfully`, 'success');
+                            loadFiles(currentFilePath);
+                        })
+                        .catch(err => showToast(err.message, 'error'));
+                    }
+                });
+            }
+
+            filesGrid.appendChild(card);
+        });
+    }
+
+    function renderBreadcrumbs(path) {
+        if (!filesBreadcrumbs) return;
+        filesBreadcrumbs.innerHTML = '';
+
+        // Add Home link
+        const homeSpan = document.createElement('span');
+        homeSpan.className = `breadcrumb-item${!path ? ' active' : ''}`;
+        homeSpan.innerHTML = '<i class="fa-solid fa-house"></i> Home';
+        if (path) {
+            homeSpan.addEventListener('click', () => loadFiles(''));
+        }
+        filesBreadcrumbs.appendChild(homeSpan);
+
+        if (!path) return;
+
+        const parts = path.split('/');
+        let accumPath = '';
+
+        parts.forEach((part, index) => {
+            // separator
+            const sep = document.createElement('span');
+            sep.className = 'breadcrumb-separator';
+            sep.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+            filesBreadcrumbs.appendChild(sep);
+
+            accumPath = accumPath ? `${accumPath}/${part}` : part;
+            const currentPath = accumPath; // lock scope
+            const isLast = index === parts.length - 1;
+
+            const span = document.createElement('span');
+            span.className = `breadcrumb-item${isLast ? ' active' : ''}`;
+            span.textContent = part;
+            
+            if (!isLast) {
+                span.addEventListener('click', () => loadFiles(currentPath));
+            }
+            filesBreadcrumbs.appendChild(span);
+        });
+    }
+
+    // New folder action
+    if (filesNewFolderBtn) {
+        filesNewFolderBtn.addEventListener('click', () => {
+            const folderName = prompt('Enter a name for the new folder:');
+            if (folderName && folderName.trim()) {
+                fetch('/api/student/files/create-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentFilePath, folder_name: folderName.trim() })
+                })
+                .then(res => {
+                    if (!res.ok) return res.json().then(data => { throw new Error(data.error || 'Failed to create folder.') });
+                    return res.json();
+                })
+                .then(() => {
+                    showToast('Folder created successfully', 'success');
+                    loadFiles(currentFilePath);
+                })
+                .catch(err => showToast(err.message, 'error'));
+            }
+        });
+    }
+
+    // File Upload event trigger
+    if (filesUploadInput) {
+        filesUploadInput.addEventListener('change', () => {
+            const files = filesUploadInput.files;
+            if (files.length > 0) {
+                uploadFiles(files);
+            }
+        });
+    }
+
+    function uploadFiles(files) {
+        const promises = Array.from(files).map(file => {
+            const formData = new FormData();
+            formData.append('path', currentFilePath);
+            formData.append('file', file);
+
+            return fetch('/api/student/files/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) throw new Error(`Failed to upload ${file.name}`);
+                return res.json();
+            });
+        });
+
+        Promise.all(promises)
+            .then(() => {
+                showToast('Files uploaded successfully', 'success');
+                if (filesUploadInput) filesUploadInput.value = ''; // Reset input
+                loadFiles(currentFilePath);
+            })
+            .catch(err => showToast(err.message, 'error'));
+    }
+
+    // Drag and Drop implementation
+    if (filesDragZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            filesDragZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (filesDragOverlay) filesDragOverlay.style.display = 'flex';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            filesDragZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (filesDragOverlay) filesDragOverlay.style.display = 'none';
+            }, false);
+        });
+
+        filesDragZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                uploadFiles(files);
+            }
+        }, false);
     }
 
 });
