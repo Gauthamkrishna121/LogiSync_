@@ -253,6 +253,41 @@
         </div><!-- /main-area -->
     </div><!-- /app-shell -->
 
+    <!-- Files Modal (Folder Explorer) -->
+    <div class="modal-overlay hidden" id="files-modal">
+        <div class="modal-card" style="max-width: 800px; width: 90%;">
+            <h3 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-folder-open" style="color: var(--accent);"></i> <span id="files-modal-title">Student Folder</span>
+            </h3>
+            
+            <!-- Breadcrumbs -->
+            <div id="files-breadcrumbs" style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Folder Content -->
+            <div id="files-list-container" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-input);">
+                <table class="data-table" style="margin-top: 0; width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Modified</th>
+                            <th>Size</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="files-list-body">
+                        <!-- Rendered dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-ghost" id="files-modal-close">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirmation Modal -->
     <div class="modal-overlay hidden" id="confirm-modal">
         <div class="modal-card">

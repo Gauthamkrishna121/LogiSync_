@@ -150,6 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn btn-outline btn-sm view-logs-btn" data-username="${s.username}" data-name="${s.full_name}">
                             <i class="fa-solid fa-eye"></i> View Logs
                         </button>
+                        <button class="btn btn-outline btn-sm view-files-btn" data-username="${s.username}" data-name="${s.full_name}">
+                            <i class="fa-solid fa-folder-open"></i> Browse Folder
+                        </button>
                         <button class="btn btn-primary btn-sm assign-task-btn" data-username="${s.username}" data-name="${s.full_name}">
                             <i class="fa-solid fa-plus"></i> Assign Task
                         </button>
@@ -165,6 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const username = btn.getAttribute('data-username');
                 const name = btn.getAttribute('data-name');
                 openLogsModal(username, name);
+            });
+        });
+
+        document.querySelectorAll('.view-files-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.getAttribute('data-username');
+                const name = btn.getAttribute('data-name');
+                openFilesModal(username, name);
             });
         });
 
@@ -470,5 +481,192 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // ═══════════════════════════════════════
+    // STUDENT FILES EXPLORER
+    // ═══════════════════════════════════════
+    const filesModal = document.getElementById('files-modal');
+    const filesModalTitle = document.getElementById('files-modal-title');
+    const filesBreadcrumbs = document.getElementById('files-breadcrumbs');
+    const filesListBody = document.getElementById('files-list-body');
+    const filesModalClose = document.getElementById('files-modal-close');
+
+    let currentFilesUsername = null;
+    let currentFilesPath = '';
+
+    if (filesModalClose) {
+        filesModalClose.addEventListener('click', () => {
+            filesModal.classList.add('hidden');
+        });
+    }
+
+    if (filesModal) {
+        filesModal.addEventListener('click', (e) => {
+            if (e.target === filesModal) {
+                filesModal.classList.add('hidden');
+            }
+        });
+    }
+
+    function openFilesModal(username, name) {
+        currentFilesUsername = username;
+        currentFilesPath = '';
+        if (filesModalTitle) {
+            filesModalTitle.textContent = `${name}'s Workspace Directory`;
+        }
+        filesModal.classList.remove('hidden');
+        loadFolder(username, '');
+    }
+
+    function loadFolder(username, path) {
+        currentFilesPath = path;
+        filesListBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 2rem;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: var(--accent);"></i>
+                    <span style="display: block; margin-top: 0.5rem; color: var(--text-muted);">Loading folder...</span>
+                </td>
+            </tr>
+        `;
+
+        fetch(`/api/student-files/${username}?path=${encodeURIComponent(path)}`)
+            .then(res => {
+                if (!res.ok) return res.json().then(d => { throw new Error(d.error || 'Failed to load files.'); });
+                return res.json();
+            })
+            .then(data => {
+                renderFolderContents(data);
+            })
+            .catch(err => {
+                filesListBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--error); padding: 2rem;">
+                            <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                            ${err.message}
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function renderFolderContents(data) {
+        filesListBody.innerHTML = '';
+        renderBreadcrumbs(data.current_path);
+
+        const items = data.items || [];
+        if (items.length === 0) {
+            filesListBody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                        <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
+                        This folder is empty.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        items.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            const icon = item.is_dir 
+                ? '<i class="fa-solid fa-folder" style="color: var(--warning); margin-right: 0.5rem;"></i>' 
+                : '<i class="fa-regular fa-file" style="color: var(--text-muted); margin-right: 0.5rem;"></i>';
+
+            const sizeDisplay = item.is_dir ? `${item.item_count} items` : formatBytes(item.size);
+            const relativeItemPath = currentFilesPath ? `${currentFilesPath}/${item.name}` : item.name;
+
+            let actionHtml = '';
+            if (item.is_dir) {
+                actionHtml = `
+                    <button class="btn btn-ghost btn-sm enter-dir-btn" data-path="${relativeItemPath}">
+                        <i class="fa-solid fa-circle-arrow-right"></i> Open
+                    </button>
+                `;
+            } else {
+                actionHtml = `
+                    <a class="btn btn-outline btn-sm" href="/api/student-files/${currentFilesUsername}/download?path=${encodeURIComponent(relativeItemPath)}" download>
+                        <i class="fa-solid fa-download"></i> Download
+                    </a>
+                `;
+            }
+
+            tr.innerHTML = `
+                <td>
+                    <div style="display: flex; align-items: center;">
+                        ${icon}
+                        <span class="${item.is_dir ? 'clickable-folder' : ''}" data-path="${relativeItemPath}" style="${item.is_dir ? 'cursor: pointer; font-weight: 500; color: var(--accent);' : ''}">
+                            ${item.name}
+                        </span>
+                    </div>
+                </td>
+                <td style="color: var(--text-muted); font-size: 0.85rem;">${item.modified}</td>
+                <td style="color: var(--text-muted); font-size: 0.85rem;">${sizeDisplay}</td>
+                <td style="text-align: right;">${actionHtml}</td>
+            `;
+
+            tr.querySelectorAll('.enter-dir-btn, .clickable-folder').forEach(elem => {
+                elem.addEventListener('click', () => {
+                    loadFolder(currentFilesUsername, relativeItemPath);
+                });
+            });
+
+            filesListBody.appendChild(tr);
+        });
+    }
+
+    function renderBreadcrumbs(currentPath) {
+        if (!filesBreadcrumbs) return;
+        filesBreadcrumbs.innerHTML = '';
+
+        const rootSpan = document.createElement('span');
+        rootSpan.style.cursor = 'pointer';
+        rootSpan.style.color = 'var(--accent)';
+        rootSpan.style.fontWeight = '600';
+        rootSpan.innerHTML = '<i class="fa-solid fa-house"></i> Root';
+        rootSpan.addEventListener('click', () => {
+            loadFolder(currentFilesUsername, '');
+        });
+        filesBreadcrumbs.appendChild(rootSpan);
+
+        if (!currentPath) return;
+
+        const parts = currentPath.split('/');
+        let accumulatedPath = '';
+
+        parts.forEach((part, index) => {
+            if (!part) return;
+            accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
+
+            const separator = document.createElement('span');
+            separator.style.color = 'var(--text-muted)';
+            separator.textContent = ' / ';
+            filesBreadcrumbs.appendChild(separator);
+
+            const linkSpan = document.createElement('span');
+            linkSpan.textContent = part;
+            
+            if (index === parts.length - 1) {
+                linkSpan.style.color = 'var(--text-light)';
+                linkSpan.style.fontWeight = '500';
+            } else {
+                linkSpan.style.cursor = 'pointer';
+                linkSpan.style.color = 'var(--accent)';
+                const targetPath = accumulatedPath;
+                linkSpan.addEventListener('click', () => {
+                    loadFolder(currentFilesUsername, targetPath);
+                });
+            }
+            filesBreadcrumbs.appendChild(linkSpan);
+        });
+    }
+
     initTheme();
 });
