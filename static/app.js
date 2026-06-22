@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cfgArrival = document.getElementById('cfg-arrival');
     const loadBtn = document.getElementById('load-btn');
     const summaryBtn = document.getElementById('summary-btn');
+    const downloadTimesheetBtn = document.getElementById('download-timesheet-btn');
 
     const slotsContainer = document.getElementById('slots-container');
     const dashboardEmpty = document.getElementById('dashboard-empty');
@@ -484,6 +485,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (summaryBtn) {
         summaryBtn.addEventListener('click', () => {
             switchView('ai-summary');
+        });
+    }
+
+    if (downloadTimesheetBtn) {
+        downloadTimesheetBtn.addEventListener('click', () => {
+            window.location.href = '/api/download-timesheet';
         });
     }
 

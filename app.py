@@ -349,6 +349,18 @@ def api_save_slot():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/download-timesheet', methods=['GET'])
+@login_required
+def api_download_timesheet():
+    from flask import send_file
+    username = session['username']
+    filepath = get_user_filepath(username)
+    
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Timesheet not found."}), 404
+        
+    return send_file(filepath, as_attachment=True, download_name=f"Timesheet_{username}.xlsx")
+
 
 @app.route('/api/generate-summary', methods=['POST'])
 @login_required
