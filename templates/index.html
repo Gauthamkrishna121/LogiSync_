@@ -171,9 +171,14 @@
                         </div>
 
                         <div class="timesheet-section">
-                            <div class="timesheet-section-header">
-                                <h3><i class="fa-solid fa-table-columns"></i> Today's Schedule</h3>
-                                <span class="badge badge-info" id="timesheet-date-badge"></span>
+                            <div class="timesheet-section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <h3><i class="fa-solid fa-table-columns"></i> Today's Schedule</h3>
+                                    <span class="badge badge-info" id="timesheet-date-badge"></span>
+                                </div>
+                                <button id="download-timesheet-btn" class="btn btn-outline btn-sm">
+                                    <i class="fa-solid fa-download"></i> Download Excel
+                                </button>
                             </div>
                             <div class="slots-container" id="slots-container">
                                 <!-- Slots rendered by JS -->
