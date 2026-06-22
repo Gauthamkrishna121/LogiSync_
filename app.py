@@ -116,6 +116,131 @@ def mentor_required(f):
     return decorated_function
 
 
+def is_authorized_for_student(student_username):
+    if 'username' not in session:
+        return False
+    role = session.get('role')
+    if role == 'admin':
+        return True
+    if role == 'mentor':
+        import user_manager
+        student = user_manager.get_user_by_username(student_username)
+        mentor = user_manager.get_user_by_username(session['username'])
+        if student and mentor and student.get('mentor_email') and student.get('mentor_email').lower() == mentor.get('email', '').lower():
+            return True
+    return False
+
+
+@app.route('/api/student-files/<username>', methods=['GET'])
+@login_required
+def api_student_files_list(username):
+    if not is_authorized_for_student(username):
+        return jsonify({"error": "Unauthorized access to student files."}), 403
+        
+    subpath = request.args.get('path', '')
+    base_dir = DEFAULT_USERS_DIR
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(base_dir)
+        
+    username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
+    if not username_clean:
+        return jsonify({"error": "Invalid student username."}), 400
+        
+    student_root_dir = os.path.join(base_dir, username_clean)
+    os.makedirs(student_root_dir, exist_ok=True)
+    
+    if subpath:
+        subpath_clean = subpath.replace('\\', '/').strip('/')
+        parts = []
+        for part in subpath_clean.split('/'):
+            if part in ('.', '..', ''):
+                continue
+            parts.append(part)
+        target_dir = os.path.abspath(os.path.join(student_root_dir, *parts))
+    else:
+        target_dir = os.path.abspath(student_root_dir)
+        
+    if not target_dir.startswith(student_root_dir):
+        return jsonify({"error": "Unauthorized directory traversal."}), 403
+        
+    if not os.path.exists(target_dir):
+        return jsonify({"error": "Directory does not exist."}), 404
+        
+    items = []
+    try:
+        for entry in os.scandir(target_dir):
+            stat = entry.stat()
+            is_dir = entry.is_dir()
+            item_count = 0
+            if is_dir:
+                try:
+                    item_count = len(os.listdir(entry.path))
+                except Exception:
+                    pass
+            
+            items.append({
+                "name": entry.name,
+                "is_dir": is_dir,
+                "size": stat.st_size if not is_dir else 0,
+                "modified": datetime.datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                "item_count": item_count
+            })
+            
+        items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+        relative_path = os.path.relpath(target_dir, student_root_dir).replace('\\', '/')
+        if relative_path == '.':
+            relative_path = ''
+            
+        return jsonify({
+            "current_path": relative_path,
+            "items": items
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student-files/<username>/download', methods=['GET'])
+@login_required
+def api_student_files_download(username):
+    if not is_authorized_for_student(username):
+        return jsonify({"error": "Unauthorized access to student files."}), 403
+        
+    subpath = request.args.get('path', '')
+    if not subpath:
+        return jsonify({"error": "Path parameter is required."}), 400
+        
+    base_dir = DEFAULT_USERS_DIR
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(base_dir)
+        
+    username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
+    if not username_clean:
+        return jsonify({"error": "Invalid student username."}), 400
+        
+    student_root_dir = os.path.join(base_dir, username_clean)
+    
+    subpath_clean = subpath.replace('\\', '/').strip('/')
+    parts = []
+    for part in subpath_clean.split('/'):
+        if part in ('.', '..', ''):
+            continue
+        parts.append(part)
+        
+    if not parts:
+        return jsonify({"error": "Invalid file path."}), 400
+        
+    target_file = os.path.abspath(os.path.join(student_root_dir, *parts))
+    if not target_file.startswith(student_root_dir) or not os.path.isfile(target_file):
+        return jsonify({"error": "Unauthorized action or file not found."}), 403
+        
+    from flask import send_file
+    try:
+        filename = os.path.basename(target_file)
+        return send_file(target_file, as_attachment=True, download_name=filename)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ───────────────────────── Views ─────────────────────────
 
 @app.route('/')
@@ -421,6 +546,108 @@ def api_send_summary():
             return jsonify({"error": "Failed to send email. Check server logs."}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+def is_authorized_for_student(student_username):
+    if 'username' not in session:
+        return False
+    role = session.get('role')
+    if role == 'admin':
+        return True
+    if role == 'mentor':
+        import user_manager
+        student = user_manager.get_user_by_username(student_username)
+        mentor = user_manager.get_user_by_username(session['username'])
+        if student and mentor and student.get('mentor_email') == mentor.get('email') and mentor.get('email'):
+            return True
+    return False
+
+
+@app.route('/api/student-files/<username>', methods=['GET'])
+@login_required
+def api_get_student_files(username):
+    if not is_authorized_for_student(username):
+        return jsonify({"error": "Unauthorized access to student files."}), 403
+
+    username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
+    base_dir = DEFAULT_USERS_DIR
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(base_dir)
+    student_dir = os.path.join(base_dir, username_clean)
+
+    if not os.path.exists(student_dir):
+        return jsonify({"error": "Student folder does not exist."}), 404
+
+    rel_path = request.args.get('path', '').strip()
+    if rel_path:
+        rel_path = os.path.normpath(rel_path).replace('..', '')
+        if rel_path in ('.', '..', '', '/'):
+            target_dir = student_dir
+            rel_path = ''
+        else:
+            target_dir = os.path.join(student_dir, rel_path)
+    else:
+        target_dir = student_dir
+        rel_path = ''
+
+    if not os.path.abspath(target_dir).startswith(os.path.abspath(student_dir)):
+        return jsonify({"error": "Invalid directory path."}), 400
+
+    if not os.path.exists(target_dir):
+        return jsonify({"error": "Directory does not exist."}), 404
+
+    if not os.path.isdir(target_dir):
+        return jsonify({"error": "Path is not a directory."}), 400
+
+    items = []
+    try:
+        for entry in os.scandir(target_dir):
+            stat = entry.stat()
+            item_rel_path = os.path.join(rel_path, entry.name).replace('\\', '/')
+            items.append({
+                "name": entry.name,
+                "isDir": entry.is_dir(),
+                "size": stat.st_size if entry.is_file() else 0,
+                "modified": datetime.datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                "relPath": item_rel_path
+            })
+    except Exception as e:
+        return jsonify({"error": f"Failed to list folder: {e}"}), 500
+
+    items.sort(key=lambda x: (not x['isDir'], x['name'].lower()))
+    return jsonify({"path": rel_path.replace('\\', '/'), "items": items})
+
+
+@app.route('/api/student-files/<username>/download', methods=['GET'])
+@login_required
+def api_download_student_file(username):
+    if not is_authorized_for_student(username):
+        return jsonify({"error": "Unauthorized access to student files."}), 403
+
+    username_clean = "".join(c for c in username if c.isalnum() or c in (' ', '_', '-')).strip()
+    base_dir = DEFAULT_USERS_DIR
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(base_dir)
+    student_dir = os.path.join(base_dir, username_clean)
+
+    if not os.path.exists(student_dir):
+        return jsonify({"error": "Student folder does not exist."}), 404
+
+    file_path = request.args.get('path', '').strip()
+    if not file_path:
+        return jsonify({"error": "File path parameter is required."}), 400
+
+    file_path_clean = os.path.normpath(file_path).replace('..', '')
+    target_file = os.path.join(student_dir, file_path_clean)
+
+    if not os.path.abspath(target_file).startswith(os.path.abspath(student_dir)):
+        return jsonify({"error": "Invalid file path."}), 400
+
+    if not os.path.exists(target_file) or os.path.isdir(target_file):
+        return jsonify({"error": "File not found."}), 404
+
+    from flask import send_from_directory
+    directory = os.path.dirname(target_file)
+    filename = os.path.basename(target_file)
+    return send_from_directory(directory, filename, as_attachment=True)
 
 
 # ───────────────────────── Admin APIs ─────────────────────────
