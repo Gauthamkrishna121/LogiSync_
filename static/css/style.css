@@ -1739,3 +1739,215 @@ h1, h2, h3, h4 {
     font-size: 0.75rem;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   DAILY CHECKLIST & RECENT ACTIVITY TIMELINE STYLES
+   ═══════════════════════════════════════════════════════════ */
+
+/* Checklist Cards & Items */
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    transition: all var(--t-fast) ease;
+}
+
+.checklist-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-hover);
+    transform: translateX(4px);
+}
+
+.checklist-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    transition: all var(--t-normal) ease;
+}
+
+.checklist-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.checklist-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: all var(--t-normal) ease;
+}
+
+.checklist-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Completed Checklist Item State */
+.checklist-item.complete {
+    background: rgba(16, 185, 129, 0.03);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.checklist-item.complete .checklist-checkbox {
+    color: var(--success);
+}
+
+.checklist-item.complete .checklist-label {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+/* Filter pills */
+.filter-pill {
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 500;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--t-fast) ease;
+}
+
+.filter-pill:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.filter-pill.active {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent-bright);
+    box-shadow: var(--shadow-accent);
+}
+
+/* Vertical Timeline */
+.activity-timeline {
+    position: relative;
+    padding-left: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 5px;
+    bottom: 5px;
+    width: 2px;
+    background: var(--border);
+}
+
+.activity-item-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    background: rgba(255, 255, 255, 0.01);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    transition: all var(--t-fast) ease;
+}
+
+.activity-item-card:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+    transform: translateX(6px);
+}
+
+.activity-marker {
+    position: absolute;
+    left: -2rem;
+    top: 0.85rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    transform: translateX(-50%);
+    transition: all var(--t-fast) ease;
+    z-index: 1;
+}
+
+.activity-item-card:hover .activity-marker {
+    border-color: var(--accent);
+    color: var(--accent-bright);
+    box-shadow: var(--shadow-accent);
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.activity-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.activity-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.activity-detail {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Category-specific styling */
+.activity-item-card.timesheet .activity-marker {
+    border-color: #3b82f6;
+    color: #60a5fa;
+}
+.activity-item-card.timesheet:hover .activity-marker {
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+.activity-item-card.file .activity-marker {
+    border-color: var(--accent);
+    color: var(--accent-bright);
+}
+.activity-item-card.file:hover .activity-marker {
+    box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+.activity-item-card.task .activity-marker {
+    border-color: var(--success);
+    color: var(--success);
+}
+.activity-item-card.task:hover .activity-marker {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.activity-item-card.summary .activity-marker {
+    border-color: #8b5cf6;
+    color: #a78bfa;
+}
+.activity-item-card.summary:hover .activity-marker {
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
+

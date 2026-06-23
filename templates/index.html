@@ -201,13 +201,72 @@
 
                 <!-- ── VIEW: Activity Feed ── -->
                 <div id="view-activity" class="view-panel hidden">
-                    <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Recent Activity
-                    </h3>
-                    <div class="card" id="activity-feed">
-                        <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
-                            <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.4;"></i>
-                            Activity events will appear here as you use the platform.
+                    <!-- Daily Checklist Tracker -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h4 style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
+                            <i class="fa-solid fa-square-list" style="color: var(--accent);"></i> Daily Progress Checklist
+                        </h4>
+                        <div class="checklist-progress-container" style="margin-bottom: 1.25rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.40rem;">
+                                <span>Day Completion</span>
+                                <span id="checklist-percent">0%</span>
+                            </div>
+                            <div class="checklist-progress-track" style="height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
+                                <div id="checklist-progress-fill" style="width: 0%; height: 100%; background: var(--accent-gradient); transition: width 0.4s ease;"></div>
+                            </div>
+                        </div>
+                        <div class="checklist-items" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div class="checklist-item" id="chk-item-timesheet">
+                                <div class="checklist-checkbox">
+                                    <i class="fa-regular fa-circle checkbox-icon"></i>
+                                </div>
+                                <div class="checklist-content">
+                                    <span class="checklist-label">Log Timesheet Blocks</span>
+                                    <span class="checklist-desc" id="chk-desc-timesheet">0 / 0 blocks logged</span>
+                                </div>
+                            </div>
+                            <div class="checklist-item" id="chk-item-tasks">
+                                <div class="checklist-checkbox">
+                                    <i class="fa-regular fa-circle checkbox-icon"></i>
+                                </div>
+                                <div class="checklist-content">
+                                    <span class="checklist-label">Complete Mentor Tasks</span>
+                                    <span class="checklist-desc" id="chk-desc-tasks">All tasks completed</span>
+                                </div>
+                            </div>
+                            <div class="checklist-item" id="chk-item-summary">
+                                <div class="checklist-checkbox">
+                                    <i class="fa-regular fa-circle checkbox-icon"></i>
+                                </div>
+                                <div class="checklist-content">
+                                    <span class="checklist-label">Send AI Daily Summary</span>
+                                    <span class="checklist-desc" id="chk-desc-summary">Generate and email daily log to your mentor</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Feed -->
+                    <div class="card">
+                        <div class="timeline-feed-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                            <h3 style="display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                                <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent);"></i> Recent Activity
+                            </h3>
+                            <div class="timeline-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="filter-pill active" data-filter="all">All</button>
+                                <button class="filter-pill" data-filter="timesheet">Timesheets</button>
+                                <button class="filter-pill" data-filter="file">Files</button>
+                                <button class="filter-pill" data-filter="task">Tasks</button>
+                                <button class="filter-pill" data-filter="summary">Summaries</button>
+                            </div>
+                        </div>
+                        <div class="activity-timeline-wrapper" style="position: relative;">
+                            <div class="activity-timeline" id="activity-feed">
+                                <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                                    <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.4;"></i>
+                                    Activity events will appear here as you use the platform.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

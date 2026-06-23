@@ -445,6 +445,7 @@ def api_load_timesheet():
 
     try:
         slots = db_timesheet_manager.get_or_create_day_slots(username, excel_date_str, arrival_time)
+        user_manager.log_activity(username, 'timesheet', "Loaded timesheet", f"Date: {date_val}")
         return jsonify({
             "filepath": "DB",
             "slots": slots
@@ -478,6 +479,8 @@ def api_save_slot():
 
     try:
         db_timesheet_manager.save_timesheet_slot_activity(username, excel_date_str, row, text)
+        preview = (text[:60] + "...") if len(text) > 60 else text
+        user_manager.log_activity(username, 'timesheet', f"Updated slot {row} description", preview or "Cleared slot activity")
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -560,11 +563,78 @@ def api_send_summary():
             track_key = f"{username}_{date_val}"
             global sent_summaries
             sent_summaries[track_key] = True
+            user_manager.log_activity(username, 'summary', "Sent daily summary to mentor", f"Date: {date_val}")
             return jsonify({"status": "success"})
         else:
             return jsonify({"error": "Failed to send email. Check server logs."}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/student/activities', methods=['GET'])
+@login_required
+def api_get_student_activities():
+    username = session['username']
+    activities = user_manager.get_activities(username)
+    return jsonify(activities)
+
+
+@app.route('/api/student/checklist-status', methods=['GET'])
+@login_required
+def api_get_checklist_status():
+    username = session['username']
+    date_val = request.args.get('date')
+    if not date_val:
+        date_val = datetime.date.today().strftime('%Y-%m-%d')
+        
+    try:
+        parts = date_val.split('-')
+        excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except Exception:
+        excel_date_str = date_val
+
+    conn = user_manager.get_db()
+    cursor = conn.execute(
+        "SELECT category, activity_text FROM timesheet_slots WHERE username = ? AND date_val = ?",
+        (username.strip().lower(), excel_date_str)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    
+    work_slots = 0
+    filled_slots = 0
+    for r in rows:
+        if r['category'] != 'Lunch Break':
+            work_slots += 1
+            if r['activity_text'] and r['activity_text'].strip():
+                filled_slots += 1
+                
+    timesheet_complete = (work_slots > 0 and filled_slots == work_slots)
+    
+    tasks = user_manager.list_tasks_by_student(username)
+    pending_tasks = [t for t in tasks if t['status'] != 'completed']
+    pending_count = len(pending_tasks)
+    tasks_complete = (pending_count == 0)
+    
+    track_key = f"{username}_{date_val}"
+    summary_sent = sent_summaries.get(track_key, False)
+    
+    return jsonify({
+        "timesheet": {
+            "complete": timesheet_complete,
+            "filled": filled_slots,
+            "total": work_slots
+        },
+        "tasks": {
+            "complete": tasks_complete,
+            "pending_count": pending_count
+        },
+        "summary": {
+            "complete": summary_sent
+        }
+    })
+
+
 def is_authorized_for_student(student_username):
     if 'username' not in session:
         return False
@@ -1062,6 +1132,7 @@ def api_student_complete_task(task_id):
         attachment_filename=attachment_filename, 
         attachment_path=attachment_path
     ):
+        user_manager.log_activity(session['username'], 'task', "Completed mentor task", f"Task ID {task_id}: {response_message or ''}")
         return jsonify({"status": "success"})
     return jsonify({"error": "Task not found or unauthorized."}), 404
 
@@ -1168,6 +1239,7 @@ def api_create_folder():
         
     try:
         os.makedirs(new_folder_path, exist_ok=True)
+        user_manager.log_activity(username, 'file', f"Created folder '{folder_name}'", f"Path: {subpath or '/'}")
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1200,6 +1272,7 @@ def api_upload_file():
         
     try:
         file.save(dest_path)
+        user_manager.log_activity(username, 'file', f"Uploaded file '{filename}'", f"Path: {subpath or '/'}")
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1230,8 +1303,10 @@ def api_delete_file():
         import shutil
         if os.path.isdir(target_item):
             shutil.rmtree(target_item)
+            user_manager.log_activity(username, 'file', f"Deleted folder '{name}'", f"Path: {subpath or '/'}")
         else:
             os.remove(target_item)
+            user_manager.log_activity(username, 'file', f"Deleted file '{name}'", f"Path: {subpath or '/'}")
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Activity log stored locally
     const activityLog = [];
+    let currentFilter = 'all';
 
     // Current app state cache
     let currentWeekNum = 1;
@@ -139,6 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
             loadWeeklyProgress(week_num);
         } else if (viewName === 'files') {
             loadFiles(currentFilePath);
+        } else if (viewName === 'activity') {
+            loadChecklistStatus();
+            loadActivities(currentFilter);
         }
 
         if (viewName === 'mentor-tasks') {
@@ -150,6 +154,16 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('click', () => {
             const view = item.getAttribute('data-view');
             if (view) switchView(view);
+        });
+    });
+
+    // Timeline category filters listener
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            currentFilter = pill.getAttribute('data-filter') || 'all';
+            loadActivities(currentFilter);
         });
     });
 
@@ -584,25 +598,192 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════
-    // ACTIVITY FEED
+    // ACTIVITY FEED & DAILY CHECKLIST
     // ═══════════════════════════════════════
-    function addActivity(action, detail) {
-        const now = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        activityLog.unshift({ action, detail, time });
-
+    function loadActivities(filter = 'all') {
         const feed = document.getElementById('activity-feed');
         if (!feed) return;
 
-        feed.innerHTML = activityLog.map(a => `
-            <div style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
-                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0;"></div>
-                <div style="flex: 1;">
-                    <div style="font-size: 0.85rem; font-weight: 500; color: var(--text-primary);">${a.action}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">${a.detail} • ${a.time}</div>
-                </div>
+        feed.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                <div class="spinner spinner-sm" style="margin: 0 auto 0.75rem;"></div>
+                Loading activity feed...
             </div>
-        `).join('');
+        `;
+
+        fetch('/api/student/activities')
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load activities.');
+                return res.json();
+            })
+            .then(activities => {
+                renderActivities(activities, filter);
+            })
+            .catch(err => {
+                feed.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: var(--error);">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                        ${err.message}
+                    </div>
+                `;
+            });
+    }
+
+    function renderActivities(activities, filter = 'all') {
+        const feed = document.getElementById('activity-feed');
+        if (!feed) return;
+
+        let filtered = activities;
+        if (filter !== 'all') {
+            filtered = activities.filter(a => a.activity_type === filter);
+        }
+
+        if (filtered.length === 0) {
+            feed.innerHTML = `
+                <div style="padding: 3rem 2rem; text-align: center; color: var(--text-muted);">
+                    <i class="fa-solid fa-inbox" style="font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.3;"></i>
+                    No activities found ${filter !== 'all' ? `in category "${filter}"` : 'yet'}.
+                </div>
+            `;
+            return;
+        }
+
+        // Map categories to icons/colors
+        const config = {
+            timesheet: { icon: 'fa-calendar-days', colorClass: 'timesheet' },
+            file: { icon: 'fa-folder-open', colorClass: 'file' },
+            task: { icon: 'fa-list-check', colorClass: 'task' },
+            summary: { icon: 'fa-wand-magic-sparkles', colorClass: 'summary' }
+        };
+
+        feed.innerHTML = filtered.map(a => {
+            const cat = config[a.activity_type] || { icon: 'fa-info-circle', colorClass: '' };
+            
+            let formattedTime = a.timestamp;
+            try {
+                const dateObj = new Date(a.timestamp.replace(' ', 'T'));
+                if (!isNaN(dateObj)) {
+                    formattedTime = dateObj.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    }) + ' • ' + dateObj.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            } catch (e) {}
+
+            return `
+                <div class="activity-item-card ${cat.colorClass}">
+                    <div class="activity-marker">
+                        <i class="fa-solid ${cat.icon}"></i>
+                    </div>
+                    <div class="activity-header">
+                        <span class="activity-title">${a.action_text}</span>
+                        <span class="activity-time">${formattedTime}</span>
+                    </div>
+                    ${a.detail_text ? `<div class="activity-detail">${a.detail_text}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function loadChecklistStatus() {
+        const dateInput = document.getElementById('cfg-date');
+        const activeDate = dateInput ? dateInput.value : '';
+        
+        fetch(`/api/student/checklist-status?date=${encodeURIComponent(activeDate)}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Checklist fetch failed');
+                return res.json();
+            })
+            .then(status => {
+                renderChecklist(status);
+            })
+            .catch(err => console.error('Checklist error:', err));
+    }
+
+    function renderChecklist(status) {
+        const percentEl = document.getElementById('checklist-percent');
+        const fillEl = document.getElementById('checklist-progress-fill');
+        if (!percentEl || !fillEl) return;
+
+        // Timesheet item
+        const tsItem = document.getElementById('chk-item-timesheet');
+        const tsIcon = tsItem ? tsItem.querySelector('.checkbox-icon') : null;
+        const tsDesc = document.getElementById('chk-desc-timesheet');
+        
+        if (tsDesc) {
+            tsDesc.textContent = `${status.timesheet.filled} / ${status.timesheet.total} blocks logged`;
+        }
+        if (tsItem && tsIcon) {
+            if (status.timesheet.complete) {
+                tsItem.classList.add('complete');
+                tsIcon.className = 'fa-solid fa-circle-check checkbox-icon';
+            } else {
+                tsItem.classList.remove('complete');
+                tsIcon.className = 'fa-regular fa-circle checkbox-icon';
+            }
+        }
+
+        // Tasks item
+        const tasksItem = document.getElementById('chk-item-tasks');
+        const tasksIcon = tasksItem ? tasksItem.querySelector('.checkbox-icon') : null;
+        const tasksDesc = document.getElementById('chk-desc-tasks');
+        
+        if (tasksDesc) {
+            if (status.tasks.pending_count > 0) {
+                tasksDesc.textContent = `${status.tasks.pending_count} pending task${status.tasks.pending_count > 1 ? 's' : ''} from mentor`;
+            } else {
+                tasksDesc.textContent = 'All mentor tasks completed!';
+            }
+        }
+        if (tasksItem && tasksIcon) {
+            if (status.tasks.complete) {
+                tasksItem.classList.add('complete');
+                tasksIcon.className = 'fa-solid fa-circle-check checkbox-icon';
+            } else {
+                tasksItem.classList.remove('complete');
+                tasksIcon.className = 'fa-regular fa-circle checkbox-icon';
+            }
+        }
+
+        // Summary item
+        const summaryItem = document.getElementById('chk-item-summary');
+        const summaryIcon = summaryItem ? summaryItem.querySelector('.checkbox-icon') : null;
+        const summaryDesc = document.getElementById('chk-desc-summary');
+        
+        if (summaryDesc) {
+            if (status.summary.complete) {
+                summaryDesc.textContent = 'AI Daily Summary successfully sent to mentor ✓';
+            } else {
+                summaryDesc.textContent = 'Generate and email daily log to your mentor';
+            }
+        }
+        if (summaryItem && summaryIcon) {
+            if (status.summary.complete) {
+                summaryItem.classList.add('complete');
+                summaryIcon.className = 'fa-solid fa-circle-check checkbox-icon';
+            } else {
+                summaryItem.classList.remove('complete');
+                summaryIcon.className = 'fa-regular fa-circle checkbox-icon';
+            }
+        }
+
+        // Calculate progress percentage
+        let checkedCount = 0;
+        if (status.timesheet.complete) checkedCount++;
+        if (status.tasks.complete) checkedCount++;
+        if (status.summary.complete) checkedCount++;
+
+        const percent = Math.round((checkedCount / 3) * 100);
+        percentEl.textContent = `${percent}%`;
+        fillEl.style.width = `${percent}%`;
+    }
+
+    function addActivity(action, detail) {
+        loadChecklistStatus();
+        loadActivities(currentFilter);
     }
 
     // ═══════════════════════════════════════

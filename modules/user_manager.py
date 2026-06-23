@@ -63,6 +63,17 @@ def init_db():
             FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS student_activities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            activity_type TEXT NOT NULL,
+            action_text TEXT NOT NULL,
+            detail_text TEXT,
+            timestamp TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        )
+    """)
     for col in ["response_message", "attachment_filename", "attachment_path"]:
         try:
             conn.execute(f"ALTER TABLE student_tasks ADD COLUMN {col} TEXT")
@@ -394,6 +405,29 @@ def update_mentor(username, full_name, email, password=None):
 
     conn.commit()
     conn.close()
+
+
+def log_activity(username, activity_type, action_text, detail_text=None):
+    """Log a student activity to the database."""
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO student_activities (username, activity_type, action_text, detail_text) VALUES (?, ?, ?, ?)",
+        (username.strip().lower(), activity_type, action_text, detail_text)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_activities(username, limit=50):
+    """Fetch the recent activities for a given student."""
+    conn = get_db()
+    cursor = conn.execute(
+        "SELECT activity_type, action_text, detail_text, timestamp FROM student_activities WHERE username = ? ORDER BY id DESC LIMIT ?",
+        (username.strip().lower(), limit)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [_row_to_dict(row) for row in rows]
 
 
 # Initialize database on module import
