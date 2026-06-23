@@ -4,6 +4,9 @@ __pycache__/
 
 # Local databases
 # users.db (tracked)
+users.db-shm
+users.db-wal
+users_restored.db
 
 # Student logs & workspaces folder
 excel_templates/
