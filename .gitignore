@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 
 # Local databases
-users.db
+# users.db (tracked)
 
 # Student logs & workspaces folder
 excel_templates/
