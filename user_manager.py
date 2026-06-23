@@ -49,6 +49,20 @@ def init_db():
             FOREIGN KEY (mentor_username) REFERENCES users(username) ON DELETE CASCADE
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS timesheet_slots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            date_val TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            duration_hrs TEXT NOT NULL,
+            category TEXT NOT NULL,
+            activity_text TEXT NOT NULL DEFAULT '',
+            row_index INTEGER NOT NULL,
+            FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        )
+    """)
     for col in ["response_message", "attachment_filename", "attachment_path"]:
         try:
             conn.execute(f"ALTER TABLE student_tasks ADD COLUMN {col} TEXT")

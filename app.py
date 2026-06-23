@@ -424,7 +424,7 @@ def api_save_config():
 @app.route('/api/load-timesheet', methods=['POST'])
 @login_required
 def api_load_timesheet():
-    import excel_manager
+    import db_timesheet_manager
     data = request.json or {}
     username = session['username']
     date_val = data.get('date_val')
@@ -433,8 +433,6 @@ def api_load_timesheet():
     if not date_val:
         return jsonify({"error": "Date value is required"}), 400
 
-    filepath = get_user_filepath(username)
-
     try:
         parts = date_val.split('-')
         excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
@@ -442,9 +440,9 @@ def api_load_timesheet():
         excel_date_str = date_val
 
     try:
-        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, arrival_time)
+        slots = db_timesheet_manager.get_or_create_day_slots(username, excel_date_str, arrival_time)
         return jsonify({
-            "filepath": filepath,
+            "filepath": "DB",
             "slots": slots
         })
     except Exception as e:
@@ -454,22 +452,28 @@ def api_load_timesheet():
 @app.route('/api/save-slot', methods=['POST'])
 @login_required
 def api_save_slot():
-    import excel_manager
+    import db_timesheet_manager
     data = request.json or {}
     username = session['username']
+    date_val = data.get('date_val')
+    
+    try:
+        parts = date_val.split('-')
+        excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except Exception:
+        excel_date_str = date_val
+
     try:
         row = int(data.get('row'))
     except (TypeError, ValueError):
         return jsonify({"error": "Invalid row value"}), 400
     text = data.get('text', '')
 
-    if not username or not row:
+    if not username or not row or not date_val:
         return jsonify({"error": "Missing parameters"}), 400
 
-    filepath = get_user_filepath(username)
-
     try:
-        excel_manager.save_timesheet_slot_activity(filepath, row, text)
+        db_timesheet_manager.save_timesheet_slot_activity(username, excel_date_str, row, text)
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -477,19 +481,21 @@ def api_save_slot():
 @app.route('/api/download-timesheet', methods=['GET'])
 @login_required
 def api_download_timesheet():
+    import db_timesheet_manager
     from flask import send_file
     username = session['username']
-    filepath = get_user_filepath(username)
     
-    if not os.path.exists(filepath):
-        return jsonify({"error": "Timesheet not found."}), 404
-        
-    return send_file(filepath, as_attachment=True, download_name=f"Timesheet_{username}.xlsx")
+    try:
+        output = db_timesheet_manager.generate_excel_download(username)
+        return send_file(output, as_attachment=True, download_name=f"Timesheet_{username}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/generate-summary', methods=['POST'])
 @login_required
 def api_generate_summary():
+    import db_timesheet_manager
     data = request.json or {}
     username = session['username']
     date_val = data.get('date_val')
@@ -498,7 +504,6 @@ def api_generate_summary():
         return jsonify({"error": "Date value is required"}), 400
         
     user = user_manager.get_user_by_username(username)
-    filepath = get_user_filepath(username)
     
     try:
         parts = date_val.split('-')
@@ -507,9 +512,7 @@ def api_generate_summary():
         excel_date_str = date_val
         
     try:
-        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
-        activities = [s['activity'] for s in slots if s['type'] == 'Work' and s.get('activity')]
-        
+        activities = db_timesheet_manager.get_day_activities(username, excel_date_str)
         summary_text = ai_service.generate_daily_summary(user['full_name'], date_val, activities)
         return jsonify({"summary_text": summary_text})
     except Exception as e:
