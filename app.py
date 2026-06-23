@@ -1,4 +1,8 @@
 import os
+import sys
+# Inject modules path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'modules')))
+
 import json
 import uuid
 import re
@@ -19,7 +23,7 @@ sent_summaries = {}
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
 CONFIG_FILE = "tracker_config.json"
-DEFAULT_USERS_DIR = "users"
+DEFAULT_USERS_DIR = "excel_templates"
 
 
 def get_config():
