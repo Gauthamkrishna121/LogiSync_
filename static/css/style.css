@@ -292,32 +292,46 @@ h1, h2, h3, h4 {
 .sidebar.collapsed .sidebar-user { justify-content: center; padding: 0.4rem; }
 .sidebar.collapsed .user-info { opacity: 0; width: 0; overflow: hidden; pointer-events: none; }
 
-/* ── Toggle button (moved to bottom) ── */
+/* ── Toggle button (semi-circle on the side) ── */
 .sidebar-toggle-wrapper {
-    padding: 0 0.75rem 0.5rem;
+    position: absolute;
+    right: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 48px;
+    z-index: 50;
+    padding: 0;
 }
 .sidebar-toggle-btn {
-    background: var(--accent) !important;
-    color: white !important;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-surface) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+    border-left: none !important;
+    border-radius: 0 24px 24px 0 !important;
+    padding: 0;
+    display: flex;
+    align-items: center;
     justify-content: center;
-    border-radius: var(--radius-md) !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    font-weight: 600;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.2) !important;
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease-out);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 .sidebar-toggle-btn:hover {
-    background: var(--accent-bright) !important;
-    color: white !important;
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45) !important;
+    background: var(--bg-hover) !important;
+    color: var(--accent) !important;
+    border-color: var(--border-hover) !important;
 }
 .sidebar-toggle-btn .toggle-icon {
     transition: transform var(--t-normal) var(--ease-out);
+    font-size: 0.75rem;
 }
 .sidebar.collapsed .sidebar-toggle-btn .toggle-icon {
     transform: rotate(180deg);
-}
-.sidebar.collapsed .sidebar-toggle-btn .toggle-text {
-    display: none;
 }
 
 /* ── Collapsed tooltips ── */
