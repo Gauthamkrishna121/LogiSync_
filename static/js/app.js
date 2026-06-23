@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         slots.forEach(s => {
             if (s.type === 'Work') {
                 workSlots++;
-                totalHours += (s.duration || 0);
+                totalHours += parseFloat(s.duration || 0);
                 if (s.activity && s.activity.trim()) filledSlots++;
             }
         });
@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         slots.forEach(s => {
             if (s.type === 'Work') {
                 workSlots++;
-                totalHours += (s.duration || 0);
+                totalHours += parseFloat(s.duration || 0);
                 if (s.activity && s.activity.trim()) filledSlots++;
             }
         });
