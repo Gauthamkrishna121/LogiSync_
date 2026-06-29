@@ -1526,12 +1526,6 @@ h1, h2, h3, h4 {
     transition: all var(--t-normal) var(--ease-out);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    
-    /* Sliding border animation via background */
-    background-image: linear-gradient(90deg, var(--accent), var(--accent-bright), #8B5CF6);
-    background-size: 0% 2px;
-    background-position: bottom left;
-    background-repeat: no-repeat;
 }
 
 .admin-body .form-input:hover, 
@@ -1547,15 +1541,14 @@ h1, h2, h3, h4 {
 .admin-body .form-textarea:focus {
     border-color: rgba(6, 182, 212, 0.4);
     box-shadow: 0 0 0 1px var(--accent), 0 8px 25px rgba(6, 182, 212, 0.18);
-    background-color: rgba(18, 20, 32, 0.8);
-    background-size: 100% 2px;
+    background-color: var(--bg-elevated);
     transform: translateY(-2px);
 }
 
 /* Explicit style for dropdown option elements to look premium and readable on dark themes */
 .admin-body .form-select option {
-    background-color: #121420; /* Deep card background */
-    color: var(--text-primary); /* Ensuring text is primary white/light gray */
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
 }
 
 /* Modals should also have premium style */
