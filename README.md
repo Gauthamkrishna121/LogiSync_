@@ -1,13 +1,13 @@
-# LogiSync 🔄
+# Mentis.ai 🔄
 
-LogiSync is a secure, modern web application designed for tracking student internships, daily task logs, and mentor-student collaborations. It automates logsheet maintenance in formatted Excel spreadsheets, generates daily work summaries using AI, tracks mentor-assigned tasks with file uploads, and provides secure workspace folder navigation for mentors and administrators.
+Mentis.ai is a secure, modern web application designed for tracking student internships, daily task logs, and mentor-student collaborations. It automates logsheet maintenance in formatted Excel spreadsheets, generates daily work summaries using AI, tracks mentor-assigned tasks with file uploads, and provides secure workspace folder navigation for mentors and administrators.
 
 ---
 
 ## 📁 Repository Directory Structure
 
 ```text
-LogiSync/
+Mentis.ai/
 │
 ├── excel_templates/                # User-specific workspaces & document vaults
 │   └── <username>/                 # Folder matching the cleaned student username
