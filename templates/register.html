@@ -6,8 +6,8 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register — LogiSync</title>
-    <meta name="description" content="Create your LogiSync account to start tracking internship hours and syncing timesheets.">
+    <title>Register — Mentis.ai</title>
+    <meta name="description" content="Create your Mentis.ai account to start tracking internship hours and syncing timesheets.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,13 +19,14 @@
 
         <!-- Left: Brand Showcase -->
         <div class="auth-showcase">
-            <div class="auth-particles" id="particles"></div>
+            <canvas class="auth-particles" id="particle-canvas"></canvas>
             <div class="showcase-content">
                 <div class="showcase-logo" style="background: transparent; box-shadow: none;">
-                    <img src="/static/images/logo.png" alt="LogiSync Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);">
+                    <img src="/static/images/logo_dark_color.png" alt="Mentis.ai Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);">
                 </div>
-                <h2>Start your journey with LogiSync</h2>
-                <p>Join interns worldwide automating their timesheets. Connect your workspace, log your daily achievements, and let LogiSync handle the paperwork.</p>
+                <h2>Mentis.ai</h2>
+                <h4 style="color: var(--text-muted); margin-top: -0.5rem; margin-bottom: 1rem; font-weight: 500;">Intelligence that understands.</h4>
+                <p>Join interns worldwide automating their timesheets. Connect your workspace, log your daily achievements, and let Mentis.ai handle the paperwork.</p>
                 <div class="showcase-stats">
                     <div class="stat-item">
                         <div class="stat-value">Instant</div>
@@ -320,19 +321,6 @@
             });
         });
 
-        // Particles
-        const particlesEl = document.getElementById('particles');
-        if (particlesEl) {
-            for (let i = 0; i < 20; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
-                p.style.left = Math.random() * 100 + '%';
-                p.style.animationDuration = (8 + Math.random() * 12) + 's';
-                p.style.animationDelay = (Math.random() * 10) + 's';
-                p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
-                particlesEl.appendChild(p);
-            }
-        }
 
         // Toast
         function showToast(message, type = 'info') {
@@ -349,5 +337,6 @@
         }
     });
     </script>
+    <script src="/static/js/auth_particles.js"></script>
 </body>
 </html>

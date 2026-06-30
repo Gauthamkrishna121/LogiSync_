@@ -1,12 +1,12 @@
-# LogiSync 🔄 — Project Technical Documentation
+# Mentis.ai 🔄 — Project Technical Documentation
 
-LogiSync is a secure, responsive, and feature-rich web application designed for tracking student internships, daily activity logs, task submissions, and mentor-student collaborations.
+Mentis.ai is a secure, responsive, and feature-rich web application designed for tracking student internships, daily activity logs, task submissions, and mentor-student collaborations.
 
 ---
 
 ## 🏛️ System Architecture
 
-LogiSync is designed around a database-first architecture. The SQLite database (`users.db`) serves as the single source of truth for all student profile credentials, timesheet logging slots, mentor-assigned tasks, and audit logs. Excel spreadsheets (`.xlsx`) are generated dynamically on-demand only when a student triggers a timesheet export.
+Mentis.ai is built on a Flask web server and designed around a database-first architecture. The SQLite database (`users.db`) serves as the single source of truth for all student profile credentials, timesheet logging slots, mentor-assigned tasks, and audit logs, and is integrated with the Google Gemini API (for daily summary generation) and SMTP (for mentor emails). Excel spreadsheets (`.xlsx`) are generated dynamically on-demand only when a student triggers a timesheet export.
 
 ```mermaid
 graph TD
@@ -94,7 +94,7 @@ The administrator acts as the supervisor:
 
 ## 💾 Database Schema (`users.db`)
 
-LogiSync runs on a SQLite database. The schema consists of four tables:
+Mentis.ai runs on a SQLite database. The schema consists of four tables:
 
 ### 1. `users`
 Stores user authentication details and role definitions.
@@ -196,7 +196,7 @@ CREATE TABLE student_activities (
 
 ---
 
-## 🚀 Setting Up & Running LogiSync
+## 🚀 Setting Up & Running Mentis.ai
 
 ### 📋 Prerequisites
 *   Python 3.8+

@@ -1,6 +1,6 @@
-# LogiSync Technical Diagrams 📊
+# Mentis.ai Technical Diagrams 📊
 
-This document provides high-fidelity, professional technical diagrams illustrating the system architecture, database schema, data flow lifecycle, and security boundaries of the LogiSync portal.
+This document provides high-fidelity, professional technical diagrams illustrating the system architecture, database schema, data flow lifecycle, and security boundaries of the Mentis.ai portal.
 
 ---
 
