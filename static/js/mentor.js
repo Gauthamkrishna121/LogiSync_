@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             const isLunch = s.type === 'Lunch Break';
             
-            card.style.background = isLunch ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)';
+            card.style.background = isLunch ? 'var(--bg-hover)' : 'var(--bg-input)';
             card.style.border = '1px solid var(--border)';
             card.style.borderRadius = 'var(--radius-sm)';
             card.style.padding = '0.75rem 1rem';
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="font-family: var(--font-heading); font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">${timeStr}</span>
                         ${categoryBadge}
                     </div>
-                    <div style="font-size: 0.85rem; line-height: 1.4; color: var(--text-secondary);">${activityText}</div>
+                    <div style="font-size: 0.85rem; line-height: 1.4; color: var(--text-primary);">${activityText}</div>
                 </div>
             `;
             list.appendChild(card);

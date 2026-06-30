@@ -1,6 +1,6 @@
-# LogiSync 🔄 — How It Works Guide
+# Mentis.ai 🔄 — How It Works Guide
 
-Welcome to LogiSync! This guide explains the core features, daily workflows, and technical magic that makes LogiSync tick.
+Welcome to Mentis.ai! This guide explains the core features, daily workflows, and technical magic that makes Mentis.ai tick.
 
 ---
 
@@ -24,7 +24,7 @@ Every day of your internship follows a simple, automated logging cycle:
 ### 1. Initialize Workspace
 *   Navigate to **Configuration** in the sidebar.
 *   Select the **Log Date** and input your **Arrival Time** (defaults to 09:00 AM).
-*   Click **Load Timesheet**. Behind the scenes, LogiSync checks the database for existing records or generates a default 8-hour schedule split into 2-hour work blocks, automatically inserting a lunch break slot.
+*   Click **Load Timesheet**. Behind the scenes, Mentis.ai checks the database for existing records or generates a default 8-hour schedule split into 2-hour work blocks, automatically inserting a lunch break slot.
 
 ### 2. Log Work Blocks
 *   On the **Dashboard**, you will see your day represented as an **Interactive Timeline** at the top, and as detailed text cards below.
@@ -41,7 +41,7 @@ Every day of your internship follows a simple, automated logging cycle:
 
 ### 4. Generate & Email AI Summary
 *   When your day is complete, navigate to the **AI Summary** tab (or click the green sync banner on your dashboard).
-*   Click **Generate AI Summary**. LogiSync gathers all your work block descriptions and sends them to the Google Gemini API, which rewrites them into a refined, professional, and well-structured report.
+*   Click **Generate AI Summary**. Mentis.ai gathers all your work block descriptions and sends them to the Google Gemini API, which rewrites them into a refined, professional, and well-structured report.
 *   Review the generated text in the editor, make any manual tweaks, and click **Send Final Summary**. This triggers the SMTP email service to send the log directly to your mentor's inbox.
 
 ### 5. Task & Document Management

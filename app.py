@@ -1024,8 +1024,7 @@ def api_mentor_students():
 @mentor_required
 def api_mentor_student_logs(username):
     import user_manager
-    import excel_manager
-    
+    import db_timesheet_manager
     mentor = user_manager.get_user_by_username(session['username'])
     student = user_manager.get_user_by_username(username)
     
@@ -1045,7 +1044,7 @@ def api_mentor_student_logs(username):
         excel_date_str = date_val
         
     try:
-        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
+        slots = db_timesheet_manager.get_or_create_day_slots(username, excel_date_str, "09:00")
         return jsonify({
             "filepath": filepath,
             "slots": slots

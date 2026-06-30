@@ -1284,7 +1284,7 @@ h1, h2, h3, h4 {
 }
 
 .auth-form-header { margin-bottom: 1.75rem; }
-.auth-form-header h2 { font-size: 1.55rem; font-weight: 700; margin-bottom: 0.35rem; color: #ffffff; }
+.auth-form-header h2 { font-size: 1.55rem; font-weight: 700; margin-bottom: 0.35rem; color: var(--text-primary); }
 .auth-form-header p { font-size: 0.85rem; color: var(--text-secondary); }
 
 .auth-form { display: flex; flex-direction: column; gap: 1.15rem; }
@@ -1518,7 +1518,7 @@ h1, h2, h3, h4 {
 .admin-body .form-input, 
 .admin-body .form-select, 
 .admin-body .form-textarea {
-    background: rgba(255, 255, 255, 0.015);
+    background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm); /* Sleeker border-radius (8px) matching options dropdown */
     color: var(--text-primary);
@@ -1553,10 +1553,10 @@ h1, h2, h3, h4 {
 
 /* Modals should also have premium style */
 .admin-body .modal-card {
-    background: rgba(22, 25, 41, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(6, 182, 212, 0.08);
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(6, 182, 212, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     padding: 2.25rem;
