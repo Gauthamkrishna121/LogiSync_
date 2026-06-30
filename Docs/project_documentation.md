@@ -6,7 +6,7 @@ LogiSync is a secure, responsive, and feature-rich web application designed for 
 
 ## 🏛️ System Architecture
 
-LogiSync is built on a Flask web server, backed by SQLite, and integrated with the Google Gemini API (for daily summary generation) and SMTP (for mentor emails).
+LogiSync is designed around a database-first architecture. The SQLite database (`users.db`) serves as the single source of truth for all student profile credentials, timesheet logging slots, mentor-assigned tasks, and audit logs. Excel spreadsheets (`.xlsx`) are generated dynamically on-demand only when a student triggers a timesheet export.
 
 ```mermaid
 graph TD
@@ -56,6 +56,10 @@ graph TD
     Excel --> Files
     AI --> Gemini
     Mail --> SMTP
+    
+    %% Scheduler tasks
+    Scheduler --> TSM
+    Scheduler --> AI
     Scheduler --> Mail
 ```
 
@@ -65,10 +69,11 @@ graph TD
 
 ### 1. Student Portal (`index.html`)
 The student portal acts as the workspace for daily logging:
-*   **Timesheet Tracker:** Log hourly work slots (Work vs. Lunch Breaks) with synced saving.
+*   **Timesheet Tracker:** Log hourly work slots (Work vs. Lunch Breaks) with real-time saving to SQLite (`users.db`).
+*   **Timesheet Export:** Programmatically compile and download all database timesheet slots as a styled Excel workbook (`.xlsx`) on-demand.
 *   **Daily Checklist Progress:** A visual completion tracker that auto-checks when timesheet blocks are complete, pending tasks are resolved, and the AI Daily Summary is sent.
 *   **Activity Timeline:** A persistent vertical chronological feed of all files uploaded, folder creation, task completions, and loaded configurations.
-*   **AI Daily Summary:** Aggregates logged daily work logs, refines them using AI into a professional log summary, and emails it to the mentor.
+*   **AI Daily Summary:** Aggregates logged daily work logs from SQLite, refines them using AI into a professional log summary, and emails it to the mentor.
 *   **Internship Files Explorer:** Upload, view, and organize documents inside the student's secure folder vault.
 *   **Mentor Tasks:** Access, review, and complete tasks assigned by mentors with attachments and response text.
 

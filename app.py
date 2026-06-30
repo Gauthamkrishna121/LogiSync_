@@ -555,8 +555,8 @@ def api_send_summary():
         if custom_summary:
             summary_text = custom_summary
         else:
-            slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
-            activities = [s['activity'] for s in slots if s['type'] == 'Work' and s.get('activity')]
+            import db_timesheet_manager
+            activities = db_timesheet_manager.get_day_activities(username, excel_date_str)
             summary_text = ai_service.generate_daily_summary(user['full_name'], date_val, activities)
             
         if mail_service.send_summary_email(mentor_email, user['full_name'], date_val, summary_text):
@@ -1024,7 +1024,7 @@ def api_mentor_students():
 @mentor_required
 def api_mentor_student_logs(username):
     import user_manager
-    import excel_manager
+    import db_timesheet_manager
     
     mentor = user_manager.get_user_by_username(session['username'])
     student = user_manager.get_user_by_username(username)
@@ -1036,8 +1036,6 @@ def api_mentor_student_logs(username):
     if not date_val:
         return jsonify({"error": "Date parameter is required."}), 400
         
-    filepath = get_user_filepath(username)
-    
     try:
         parts = date_val.split('-')
         excel_date_str = f"{parts[2]}/{parts[1]}/{parts[0]}"
@@ -1045,9 +1043,9 @@ def api_mentor_student_logs(username):
         excel_date_str = date_val
         
     try:
-        slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
+        slots = db_timesheet_manager.get_or_create_day_slots(username, excel_date_str, "09:00")
         return jsonify({
-            "filepath": filepath,
+            "filepath": "DB",
             "slots": slots
         })
     except Exception as e:
@@ -1355,15 +1353,14 @@ if __name__ == '__main__':
             if not mentor_email:
                 continue
                 
-            filepath = get_user_filepath(username)
-            if not os.path.exists(filepath):
-                continue
-                
             try:
+                import db_timesheet_manager
                 excel_date_str = f"{today_str[8:10]}/{today_str[5:7]}/{today_str[0:4]}"
-                slots = excel_manager.get_or_create_day_slots(filepath, excel_date_str, "09:00")
-                activities = [s['activity'] for s in slots if s['type'] == 'Work' and s.get('activity')]
+                activities = db_timesheet_manager.get_day_activities(username, excel_date_str)
                 
+                if not activities:
+                    continue
+                    
                 summary_text = ai_service.generate_daily_summary(student['full_name'], today_str, activities)
                 
                 if mail_service.send_summary_email(mentor_email, student['full_name'], today_str, summary_text):
